@@ -3,25 +3,27 @@ import numpy as np
 import pandas as pd
 import os
 from RT_dist_plot import *
-from scipy.signal import argrelmin, argrelmax
 import pickle
+from wheel_utils import *
 
 
-def compute_wheel_data(wheel, n_trials):
+def compute_wheel_data(wheel, n_trials, eid):
     """
     COMPUTE_WHEEL_DATA outputs time and position data for N = 1 session, 1 mouse
 
-    INPUTS
-        [1] wheel: [user-defined object in RT_dist_plot]
-        [2] n_trials: #trials [array] 
-    OUTPUTS:
-        [1] time data
-        [2] position data
+    :param wheel: [user-defined object in RT_dist_plot]
+    :param n_trials: #trials [np.array] 
+    :param eid: session name [string]
+    :return time data [list]
+    :return position data [list]
+    :return motionOnset indices [list]
+    :return responseTime indices [list]
 
     """
+    trials = one.load_object(eid, 'trials')
 
     fs = 1000 ## (units = [Hz] sampling rate)
-    t_eid = []; p_eid = []
+    t_eid = []; p_eid = []; motionOnset_eid_idx = []; responseTime_eid_idx = []
     for i in range(n_trials):
         trial_time = abs(wheel.trial_timestamps[i][-1] - wheel.trial_timestamps[i][0])
         t_resampled = np.linspace(wheel.trial_timestamps[i][0], wheel.trial_timestamps[i][-1], num=int(trial_time*fs))
@@ -41,46 +43,27 @@ def compute_wheel_data(wheel, n_trials):
         else:
             t_final = t_data
             p_final = p_data
+        
+        ## compute motionOnset and responseTime
+        motionOnset_idx = find_nearest(t_resampled, wheel.first_movement_onset_times[i]) ## find index in resampled data based on wheel data in seconds 
+        responseTime_idx = find_nearest(t_resampled, trials.response_times[i])
 
         ## save wheel data
-        t_eid.append(t_final); p_eid.append(p_final)
+        t_eid.append(t_final); p_eid.append(p_final); motionOnset_eid_idx.append(motionOnset_idx); responseTime_eid_idx.append(responseTime_idx)
 
-    return t_eid, p_eid
-
-def compute_n_extrema(t_eid, p_eid, n_trials):
-    """
-    COMPUTE_N_EXTREMA computes #extrema for N = 1 session, 1 mouse
-
-    INPUTS
-        [1] t_eid: wheel time data (units: [seconds]) [list]
-        [2] p_eid: wheel position data (units: [degrees]) [list]
-        [3] n_trials: #trials [array]
-    OUTPUTS:
-        [1] n_extrema: #extrema [list]
-
-    """
-        
-    ## compute extrema
-    min_idx = [argrelmin(p_eid[i], order=1)[0] for i in range(n_trials)]
-    max_idx = [argrelmax(p_eid[i], order=1)[0] for i in range(n_trials)]
-    ext_idx = [np.concatenate((min_idx[i],max_idx[i]), axis=0) for i in range(n_trials)]
-    n_extrema = [len(ext_idx[i]) for i in range(n_trials)]
-
-    return n_extrema
+    return t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx
 
 
 def prepare_wheel_data_single_csv(mouse, eid):
     """
     PREPARE_WHEEL_DATA_SINGLE_CSV outputs csv for N = 1 session, 1 mouse
 
-    INPUTS
-        [1] mouse: mouse name [string]
-        [2] eid: session name [string]
-    OUTPUTS:
-        [1] csv file: written to "/nfs/gatsbystor/naureeng/{mouse}/{eid}/{eid}_wheelData.csv" 
+    :param mouse: mouse name [string]
+    :param eid: session name [string]
+    :returns csv file: written to "/nfs/gatsbystor/naureeng/{mouse}/{eid}/{eid}_wheelData.csv" 
     
     """
-    df = pd.DataFrame([], columns=["eid", "trial_no", "contrast", "block", "goCueRT", "stimOnRT", "duration", "choice", "feedbackType", "first_wheel_move", "last_wheel_move", "n_extrema", "rms"])
+    df = pd.DataFrame([], columns=["eid", "trial_no", "contrast", "block", "goCueRT", "stimOnRT", "duration", "choice", "feedbackType", "first_wheel_move", "last_wheel_move", "n_extrema", "rms", "speed"])
 
     ## obtain raw data
     trials = one.load_object(eid, 'trials')
@@ -105,9 +88,11 @@ def prepare_wheel_data_single_csv(mouse, eid):
         trials.contrast[contrastRight_idx] = trials.contrastRight[contrastRight_idx]
         trials.contrast[contrastLeft_idx] = -1 * trials.contrastLeft[contrastLeft_idx]
 
-        ## compute k 
-        t_eid, p_eid = compute_wheel_data(wheel, n_trials)
-        n_extrema = compute_n_extrema(t_eid, p_eid, n_trials)
+        ## compute wheel statistics 
+        t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx = compute_wheel_data(wheel, n_trials, eid)
+        n_extrema = compute_n_extrema(t_eid, p_eid, n_trials) ## compute k
+        rms = compute_rms(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trials) ## compute rms
+        speed = compute_speed(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trials, n_extrema) ## compute speed
 
         ## build df 
         df["eid"] = np.repeat(eid, n_trials)
@@ -122,9 +107,10 @@ def prepare_wheel_data_single_csv(mouse, eid):
         df["first_wheel_move"] = [wheel.movement_directions[i][0] for i in range(n_trials)]
         df["last_wheel_move"] = [wheel.movement_directions[i][-1] for i in range(n_trials)]
         df["n_extrema"] = n_extrema
+        df["rms"] = rms
+        df["speed"] = speed
 
         ## save df as sv
         df.to_csv(f"/nfs/gatsbystor/naureeng/{mouse}/{eid}/{eid}_wheelData.csv", index=False)
         print("csv saved")
-
 
