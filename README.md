@@ -7,7 +7,7 @@ In the International Brain Laboratory, mice use a steering wheel to move a visua
 ## setup
 ### iblenv environment
 ### install <code>statannotations</code>
-We use <code>statannotations</code> to perform statistical analysis in Python:
+We use <code>statannotations</code> to perform statistical analysis in Python.
 
 <code> pip install statannotations </code>
 
