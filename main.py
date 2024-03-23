@@ -23,7 +23,7 @@ k0_lo, k1_lo, k2_lo, k3_lo, k4_lo, n_trials_lo = compute_wiggle_var_by_grp(subje
 k0_ze, k1_ze, k2_ze, k3_ze, k4_ze, n_trials_ze = compute_wiggle_var_by_grp(subject_name, eids, 0.0, "feedbackType") ## zero
 
 ## [3] plotting across eids per mouse
-suffix = "K_four_groups"
+suffix = "K_four_groups_accuracy"
 x0_str = "k = 0"
 x1_str = "k = 1"
 x2_str = "k = 2"

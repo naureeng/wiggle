@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 from statannotations.Annotator import Annotator
 
 
@@ -25,6 +26,27 @@ def figure_style():
 
 
 def plot_four_boxplot_grps(n_trials, x0, x1, x2, x3, x4, tstring, fname, mouse, x0_string, x1_string, x2_string, x3_string, x4_string, ystring):
+    """
+    PLOT_FOUR_BOXPLOT_GRPS outputs boxplot for N = >1 session, 1 mouse
+
+    :param n_trials: #trials [np.array]
+    :param x0: group0 data [list] (k = 0)
+    :param x1: group1 data [list] (k = 1)
+    :param x2: group2 data [list] (k = 2)
+    :param x3: group3 data [list] (k = 3)
+    :param x4: group4 data [list] (k >= 4)
+    :param tstring: title [string]
+    :param fname: folder name [string]
+    :param mouse: subject name [string]
+    :param x0_string: group0 label [string]
+    :param x1_string: group1 label [string]
+    :param x2_string: group2 label [string]
+    :param x3_string: group3 label [string]
+    :param x4_string: group4 label [string]
+    :param ystring: yaxis label [string]
+    :return boxplot [png file]
+
+    """
 
     ## open figure
     svfg = plt.figure(figsize=(10,8))
@@ -60,4 +82,12 @@ def plot_four_boxplot_grps(n_trials, x0, x1, x2, x3, x4, tstring, fname, mouse, 
     ## despine
     sns.despine(trim=False, offset=8)
     plt.tight_layout()
-    plt.show()
+
+    ## save plot
+    pathname = f"/nfs/gatsbystor/naureeng/{fname}/"
+    if not os.path.exists(pathname):
+        os.makedirs(pathname)
+    svfg.savefig(f"/nfs/gatsbystor/naureeng/{fname}/{mouse}_{fname}.png", dpi=300)
+    print("boxplot img saved")
+    plt.close()
+
