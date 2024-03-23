@@ -11,7 +11,7 @@ Create and setup the iblenv conda environment, following the instructions here.
 ### install <code>statannotations</code>
 Install <code>statannotations</code> to perform statistical analysis in Python.
 
-<code> pip install statannotations </code>
+`pip install statannotations` 
 
 Florian Charlier, Marc Weber, Dariusz Izak, Emerson Harkin, Marcin Magnus, 
 Joseph Lalli, Louison Fresnais, Matt Chan, Nikolay Markov, Oren Amsalem, 
