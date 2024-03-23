@@ -5,7 +5,12 @@ In the International Brain Laboratory, mice use a steering wheel to move a visua
 **wiggle** provides code to reproduce our results. 
 
 ## setup
+### iblenv environment
+### install statannotations
+
+## usage
+You can run the whole pipeline with 'main.py'
 
 ## contact
-Email <naureen.ghani.18@ucl.ac.uk> with any questions.
+E-mail <naureen.ghani.18@ucl.ac.uk> with any questions.
 
