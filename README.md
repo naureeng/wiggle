@@ -19,7 +19,7 @@ Sebastian Proost, Agamemnon Krasoulis, getzze, & Stefan Repplinger. (2022).
 Statannotations (v0.6). Zenodo. https://doi.org/10.5281/zenodo.7213391
 
 ## usage
-You can run the whole pipeline with <code>main.py</code>.
+Run the whole pipeline with <code>main.py</code>.
 
 ## contact
 E-mail <naureen.ghani.18@ucl.ac.uk> with any questions.
