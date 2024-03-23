@@ -1,1 +1,1 @@
-# 💣 wiggle: analyse mouse steering wheel data 💣 <img src="https://images.rawpixel.com/image_800/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDIyLTA4L2pvYjk1Mi0wNTcteC5qcGc.jpg" width="25%" title="bombcell" alt="bombcell" align="right" vspace = "20">
+# 🐭 wiggle: analyse mouse steering wheel data 🖱️ <img src="https://images.rawpixel.com/image_800/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDIyLTA4L2pvYjk1Mi0wNTcteC5qcGc.jpg" width="25%" title="bombcell" alt="bombcell" align="right" vspace = "20">
