@@ -1,2 +1,1 @@
-# wiggle
-IBL wheel data analysis 
+# 💣 wiggle: analyse mouse steering wheel data 💣 
