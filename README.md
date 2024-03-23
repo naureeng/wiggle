@@ -4,8 +4,8 @@ In the International Brain Laboratory, mice use a steering wheel to move a visua
 
 **wiggle** provides code to reproduce our results. 
 
-### Setup
+## Setup
 
-### Contact
+## Contact
 Email naureen.ghani.18@ucl.ac.uk with any questions.
 
