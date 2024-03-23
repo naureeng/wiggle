@@ -9,7 +9,7 @@ In the International Brain Laboratory, mice use a steering wheel to move a visua
 ### install statannotations
 
 ## usage
-You can run the whole pipeline with 'main.py'
+You can run the whole pipeline with <code>main.py</code>.
 
 ## contact
 E-mail <naureen.ghani.18@ucl.ac.uk> with any questions.
