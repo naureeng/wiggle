@@ -74,10 +74,19 @@ def plot_four_boxplot_grps(n_trials, x0, x1, x2, x3, x4, tstring, fname, mouse, 
     ## annotations
     pairs=[(f"{x0_string}", f"{x4_string}"), (f"{x0_string}", f"{x2_string}"),  (f"{x2_string}", f"{x4_string}")]
     order = [f"{x0_string}", f"{x1_string}", f"{x2_string}", f"{x3_string}", f"{x4_string}"]
+    
+    ## try/except clause to handle cases where the data is all zeros
+    try:
+        annotator = Annotator(ax, pairs, data=overall_df, order=order)
 
-    annotator = Annotator(ax, pairs, data=overall_df, order=order)
-    annotator.configure(test='Wilcoxon', text_format='star', loc='outside', line_width="4", fontsize=28) # Wilcoxon Signed-Rank test for pairwise comparisons of same sessions within one mouse
-    annotator.apply_and_annotate()
+        if mouse == "": ## data analysis across multiple mice
+            annotator.configure(test='Mann-Whitney', text_format='star', loc='outside', line_width="4", fontsize=28, comparisons_correction="bonferroni") # U-test across mice with Bonferroni correction
+        else: ## data analysis across sessions for one mouse
+            annotator.configure(test='Wilcoxon', text_format='star', loc='outside', line_width="4", fontsize=28) # Wilcoxon Signed-Rank test for pairwise comparisons of same sessions within one mouse
+
+        annotator.apply_and_annotate()
+    except:
+        pass
 
     ## despine
     sns.despine(trim=False, offset=8)

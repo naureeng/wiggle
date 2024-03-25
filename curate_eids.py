@@ -16,7 +16,7 @@ def curate_eids_mouse(subject_name):
 
     """
 
-    eids = one.search(subject=subject_name, task_protocol="biased", data="trials.table")
+    eids = one.search(subject=subject_name, data="trials.table")
     for i in range(len(eids)):
         eid = eids[i]
         try:

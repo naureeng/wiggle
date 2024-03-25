@@ -5,6 +5,22 @@ import numpy as np
 import pandas as pd
 
 def compute_wiggle_var_by_grp(mouse, eids, contrast_value, yname):
+    """
+    COMPUTE_WIGGLE_VAR_BY_GRP outputs data per group by k and trial counts for N = 1 mouse
+
+    :param mouse: mouse name [string]
+    :param eids: sessions [list]
+    :param contrast_value: contrast value [np.array]
+    :param yname: variable of interest on y-axis [string]
+    :return k0_grp: data for k = 0 [list]
+    :return k1_grp: data for k = 1 [list]
+    :return k2_grp: data for k = 2 [list]
+    :return k3_grp: data for k = 3 [list]
+    :return k4_grp: data for k >= 4 [list]
+    :return counts_grp: data for #trials [list]
+
+    """
+
 
     k0_grp = []; k1_grp = []; k2_grp = []; k3_grp = []; k4_grp = []; counts_grp = []
 
