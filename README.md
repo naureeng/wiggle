@@ -6,7 +6,7 @@ In the International Brain Laboratory, mice use a steering wheel to move a visua
 
 ## setup
 ### <code>iblenv</code> environment
-Create and setup the iblenv conda environment, following the instructions here.
+Create and setup the iblenv conda environment, following the <a href="https://github.com/int-brain-lab/iblenv" target="_blank">instructions here</a>.
 
 ### install <code>statannotations</code>
 Install <code>statannotations</code> to perform statistical analysis in Python.
