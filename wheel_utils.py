@@ -7,13 +7,17 @@ import math
 
 
 def find_nearest(array, value):
-    """
-    FIND_NEAREST obtains the index where a value occurs in array
+    """Obtains nearest value in array
+
+    Computes the index where a value occurs in array
     author: michael schartner
 
-    :param array: matrix [np.array]
-    :param value: search input [int]
-    :return idx: index in array where value occurs [int]
+    Args:
+        array (np.array): multiple values
+        value (int): search input
+
+    Returns:
+        idx (int): index in array where value occurs
 
     """
 
@@ -25,14 +29,17 @@ def find_nearest(array, value):
 
 
 def compute_n_extrema(t_eid, p_eid, n_trials):
-    """
-    COMPUTE_N_EXTREMA computes #extrema for N = 1 session, 1 mouse
+    """Obtains #extrema
+    
+    Computes #extrema for N = 1 session, 1 mouse
 
-    :param t_eid: wheel time data (units: [seconds]) [list]
-    :param p_eid: wheel position data (units: [degrees]) [list]
-    :param n_trials: #trials [array]
-    :returns n_extrema: #extrema [list]
-    :returns ext_idx: extrema indices on motionOnset-aligned data [list]
+    Args:
+        t_eid (list): wheel time data [sec]
+        p_eid (list): wheel position data [deg]
+        n_trials (np.array): #trials
+
+    Returns:
+        n_extrema (list): #extrema
 
     """
 
@@ -46,15 +53,19 @@ def compute_n_extrema(t_eid, p_eid, n_trials):
 
 
 def compute_rms(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trials):
-    """
-    COMPUTE_RMS computes root mean square (rms) speed for N = 1 session, 1 mouse
+    """Obtains root mean square speed (RMS)
 
-    :param t_eid: wheel time data (units: [sec]) [list]
-    :param p_eid: wheel position data (units: [deg]) [list]
-    :param motionOnset_eid_idx: index of motionOnset
-    :param responseTime_eid_idx: index of responseTime
-    :param n_trials: #trials [array]
-    :returns rms_eid: root mean square speed (units: [deg/sec]) [list]
+    Computes root mean square speed for N = 1 session, 1 mouse
+    
+    Args:
+        t_eid (list): wheel time data [sec]
+        p_eid (list): wheel position data [deg]
+        motionOnset_eid_idx (int): motionOnset index
+        responseTime_eid_idx (int): responseTime index
+        n_trials (np.array): #trials
+
+    Returns:
+        rms_eid (list): root mean square speed [deg/sec]
 
     """
 
@@ -75,11 +86,11 @@ def compute_rms(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trial
         except:
             responseTime = time_trial[-1] ## use last time point for overshoot trials
 
-        T = responseTime - motionOnset ## normalize rms by T (duration of analysis window)
-       
         ## split data into 0.05 sec bins
         bins = np.arange(motionOnset, responseTime, 0.05) ## (units: [sec])
         idx_bins = [find_nearest(time_trial, i) for i in bins] ## indices of each bin
+
+        n_bins = len(bins) ## normalize rms by #bins
 
         slope_trial_bin = []
         for j in range(len(bins)-1):
@@ -90,23 +101,27 @@ def compute_rms(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trial
             slope = np.abs(stop_theta - start_theta)/(stop_time - start_time) ## compute slope magnitude in 0.05 sec bin
             slope_trial_bin.append(slope**2) ## compute squared slope magnitude
 
-        rms = np.sqrt(sum(slope_trial_bin) / T) ## normalize by T and take square root (units: [deg/sec]) 
+        rms = np.sqrt(sum(slope_trial_bin) / n_bins) ## normalize by #bins and take square root (units: [deg/sec]) 
         rms_eid.append(rms)
 
     return rms_eid
 
 
 def compute_speed(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trials, n_extrema):
-    """
-    COMPUTE_SPEED computes wheel speed for N = 1 session, 1 mouse
+    """Obtains speed
 
-    :param t_eid: wheel time data (units: [sec]) [list]
-    :param p_eid: wheel position data (units: [deg]) [list]
-    :param motionOnset_eid_idx: index of motionOnset
-    :param responseTime_eid_idx: index of responseTime
-    :param n_trials: #trials [np.array]
-    :param n_extrema: #extrema [list]
-    :returns speed_eid: wheel speed (units: [deg/sec]) [list]
+    Computes wheel speed for N = 1 session, 1 mouse
+    
+    Args:
+        t_eid (list): wheel time data [sec]
+        p_eid (list): wheel position data [deg]
+        motionOnset_eid_idx (int): motionOnset index
+        responseTime_eid_idx (int): responseTime index
+        n_trials (np.array): #trials
+        n_extrema (list): #extrema
+
+    Returns:
+        speed_eid (list): wheel speed [deg/sec]
 
     """
 
@@ -162,3 +177,5 @@ def compute_speed(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_tri
         speed_eid.append(speed)
     
     return speed_eid
+
+

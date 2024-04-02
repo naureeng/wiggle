@@ -1,61 +1,42 @@
-## functions to compute variable of interest across eids per mouse
-
 ## import dependencies
 import numpy as np
 import pandas as pd
 
-def compute_wiggle_var_by_grp(mouse, eids, contrast_value, yname):
+def compute_wiggle_var_by_grp(subject_name, eids, contrast_value, yname, data_path):
+    """ Perform wiggle analysis per mouse. 
+
+    Compute data per group by k and trial counts for N = 1 mouse.
+
+    Args:
+        subject_name (str): mouse name
+        eids (list): sessions
+        contrast_value (float): contrast value [±1, ±0.25, ±0.125, ±0.0625, 0]
+        data_path (str): path to data files
+
+    Returns:
+        Data for groups k = 0, 1, 2, 3, 4, and trial counts (tuple of lists)
+
     """
-    COMPUTE_WIGGLE_VAR_BY_GRP outputs data per group by k and trial counts for N = 1 mouse
 
-    :param mouse: mouse name [string]
-    :param eids: sessions [list]
-    :param contrast_value: contrast value [np.array]
-    :param yname: variable of interest on y-axis [string]
-    :return k0_grp: data for k = 0 [list]
-    :return k1_grp: data for k = 1 [list]
-    :return k2_grp: data for k = 2 [list]
-    :return k3_grp: data for k = 3 [list]
-    :return k4_grp: data for k >= 4 [list]
-    :return counts_grp: data for #trials [list]
+    group_data = [[] for _ in range(5)] ## initialize lists for groups k = 0 to 4
+    trial_counts = [] ## initialize list for trial counts
 
-    """
+    for eid in eids:
 
+        try:
+            df_eid = pd.read_csv(f"{data_path}/{subject_name}/{eid}/{eid}_wheelData.csv")
+        except FileNotFoundError:
+            print(f"File not found for session {eid}. Skipping...")
+            continue
 
-    k0_grp = []; k1_grp = []; k2_grp = []; k3_grp = []; k4_grp = []; counts_grp = []
-
-    for i in range(len(eids)):
-        eid = eids[i]
-        ## load wheel csv per eid
-        df_eid = pd.read_csv(f"/nfs/gatsbystor/naureeng/{mouse}/{eid}/{eid}_wheelData.csv")
         df_eid["feedbackType"] = df_eid["feedbackType"].replace(-1,0) ## to compute average
-        df_lo = df_eid.query(f"abs(contrast)=={contrast_value} and abs(goCueRT-stimOnRT)<=0.05") ## to query trials by contrast
+        df_data = df_eid.query(f"abs(contrast)=={contrast_value} and abs(goCueRT-stimOnRT)<=0.05") ## to query trials by contrast
+        trial_counts.append(len(df_data)) 
 
-        ## stratify data into groups by k
-        ## k = #extrema
-        df_k0 = df_lo.query("n_extrema == 0 and duration<=1")
-        df_k1 = df_lo.query("n_extrema == 1 and duration<=1")
-        df_k2 = df_lo.query("n_extrema == 2 and duration<=1")
-        df_k3 = df_lo.query("n_extrema == 3 and duration<=1")
-        df_k4 = df_lo.query("n_extrema >= 4 and duration<=1")
+        for k in range(5):
+            df_k = df_data.query(f"n_extrema == {k} and duration <= 1") ## to query trials by #extrema and duration [sec] 
+            if len(df_k) >= 1: ## minimum of one trial
+                group_mean = df_k[yname].mean()
+                group_data[k].append(group_mean)
 
-        ## check trial length
-        n_trials = 1 ## minimum #trials per group
-        if len(df_k0)>=n_trials and len(df_k1)>=n_trials and len(df_k2)>=n_trials and len(df_k3)>=n_trials and len(df_k4)>=n_trials:
-            ## accuracy of each group
-            grp_k0 = df_k0[f"{yname}"].mean()
-            grp_k1 = df_k1[f"{yname}"].mean()
-            grp_k2 = df_k2[f"{yname}"].mean()
-            grp_k3 = df_k3[f"{yname}"].mean()
-            grp_k4 = df_k4[f"{yname}"].mean()
-
-            ## save each group
-            k0_grp.append(grp_k0)
-            k1_grp.append(grp_k1)
-            k2_grp.append(grp_k2)
-            k3_grp.append(grp_k3)
-            k4_grp.append(grp_k4)
-            counts_grp.append(len(df_lo))
-
-    return k0_grp, k1_grp, k2_grp, k3_grp, k4_grp, counts_grp
-
+    return tuple(group_data), trial_counts

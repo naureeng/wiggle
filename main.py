@@ -7,109 +7,106 @@ from curate_eids import *
 from analysis_utils import *
 from plot_utils import * 
 import pickle
+import seaborn as sns
+from pathlib import Path
+
+one = ONE(base_url='https://openalyx.internationalbrainlab.org',
+          password='international', silent=True)
 
 ## per mouse analysis
 
-def preprocess_per_mouse(subject_name):
-    """
-    PREPROCESS_PER_MOUSE computes csv with  wheel Data "{eid}_wheelData.csv" for N = 1 mouse
-    :param subject_name: mouse name [string]
-    :return csv per eid for N = 1 mouse
+def preprocess_per_mouse(subject_name, data_path):
+    """Pre-process one mouse
+
+    Computes csv with  wheel Data "{eid}_wheelData.csv" for N = 1 mouse
+
+    Args:
+        subject_name (str): mouse name
+        data_path (str): path to data files 
+
     """
 
     ## curate eids with csv files per mouse
-    curate_eids_mouse(subject_name)
+    curate_eids_mouse(subject_name, data_path)
 
-def build_k_groups_per_mouse(subject_name, yname, y_str):
+def build_k_groups_per_mouse(subject_name, yname, ystr, data_path):
+    """Process one mouse
+
+    Outputs analysis and plot of groups by #extrema for N = 1 mouse 
+
+    Args:
+        subject_name (str): mouse name
+        yname (str): variable of interest
+        ystr (str): y-axis label for yname 
+
     """
-    BUILD_K_GROUPS_PER_MOUSE outputs analysis and plot of k groups for N = 1 mouse 
 
-    :param subject_name: mouse name [string]
-    :param yname: variable of interest [string]
-    :param ystring: y-axis label for yname [string]
-    :return /{subject_name}_{yname}.png [image]
-    :return /{subject_name}.k_groups_{yname] [pickle]
-
-    """
-
-    eids = np.load(f"/nfs/gatsbystor/naureeng/{subject_name}/{subject_name}_eids_wheel.npy")
+    eids = np.load(Path(data_path, subject_name, f"{subject_name}_eids_wheel.npy"))
     print(f"{subject_name}: {len(eids)} wheel sessions")
 
-    ## [2] analysis across eids per mouse
+    contrasts = [1.0, 0.0625, 0.0]  # high, low, zero contrasts
+    contrast_labels = ["high", "low", "zero"] ## contrast labels
+    data = [] # initialize data
 
-    ## accuracy across contrast groups
-    k0_hi, k1_hi, k2_hi, k3_hi, k4_hi, n_trials_hi = compute_wiggle_var_by_grp(subject_name, eids, 1.0, f"{yname}") ## high
-    k0_lo, k1_lo, k2_lo, k3_lo, k4_lo, n_trials_lo = compute_wiggle_var_by_grp(subject_name, eids, 0.0625, f"{yname}") ## low
-    k0_ze, k1_ze, k2_ze, k3_ze, k4_ze, n_trials_ze = compute_wiggle_var_by_grp(subject_name, eids, 0.0, f"{yname}") ## zero
+    ## plot labels
+    x_labels = ["k = 0", "k = 1", "k = 2", "k = 3", "k >= 4"]
+    xstr  = "# of wheel direction changes"
 
-    ## [3] plotting across eids per mouse
-    suffix = f"K_four_groups_{yname}"
-    x0_str = "k = 0" 
-    x1_str = "k = 1"
-    x2_str = "k = 2"
-    x3_str = "k = 3"
-    x4_str = "k >= 4"
+    for i in range(len(contrasts)):
+        contrast = contrasts[i]
+        results, n_trials = compute_wiggle_var_by_grp(subject_name, eids, contrast, yname, data_path)
 
-    ## high contrast
-    plot_four_boxplot_grps(n_trials_hi, k0_hi, k1_hi, k2_hi, k3_hi, k4_hi, f"{subject_name} high contrast", f"high_contrast_{suffix}", subject_name, x0_str, x1_str, x2_str, x3_str, x4_str, y_str)
-    ## low contrast
-    plot_four_boxplot_grps(n_trials_lo, k0_lo, k1_lo, k2_lo, k3_lo, k4_lo, f"{subject_name} low contrast", f"low_contrast_{suffix}", subject_name, x0_str, x1_str, x2_str, x3_str, x4_str, y_str)
-    ## zero contrast
-    plot_four_boxplot_grps(n_trials_ze, k0_ze, k1_ze, k2_ze, k3_ze, k4_ze, f"{subject_name} zero contrast", f"zero_contrast_{suffix}", subject_name, x0_str, x1_str, x2_str, x3_str, x4_str, y_str)
+        data.extend([np.median(result) for result in results])
+        data.append(int(np.median(n_trials))) ## integer necessary for weighing DataFrame
 
-    ## [4] save data per mouse
-    f = open(f"/nfs/gatsbystor/naureeng/{subject_name}.k_groups_{yname}", 'wb')
-    data = [np.median(k0_hi), np.median(k1_hi), np.median(k2_hi), np.median(k3_hi), np.median(k4_hi), np.median(n_trials_hi), np.median(k0_lo), np.median(k1_lo), np.median(k2_lo), np.median(k3_lo), np.median(k4_lo), np.median(n_trials_lo), np.median(k0_ze), np.median(k1_ze), np.median(k2_ze), np.median(k3_ze), np.median(k4_ze), np.median(n_trials_ze)]
-    print(data)
-    pickle.dump(data, f)
-    f.close()
-    print("data pickled")
+        plot_four_boxplot_grps(n_trials, results, x_labels, subject_name, xstr, ystr, yname, Path(data_path, f"{contrast_labels[i]}_contrast_{yname}"), "Wilcoxon", figure_size=(10,8))
 
-def compute_across_mice(mouse_names, yname, ystring):
-    """
-    COMPUTE_ACROSS_MICE outputs analysis and plot of k groups for multiple mice
+    with open(Path(data_path, "results", f"{subject_name}.k_groups_{yname}"), "wb") as f:
+        pickle.dump(data, f)
 
-    :param mouse_names: mouse names [list]
-    :param yname: variable of interest [string]
-    :param ystring: y-axis label for yname [string]
-    :return /{}_{yname}.png [image]
+def compute_across_mice(mouse_names, yname, ystr, data_path):
+    """Process multiple mice
+
+    Outputs analysis and plot of groups by #extrema for N > 1 mouse
+
+    Args:
+        mouse_names (list): mouse names
+        yname (str): variable of interest
+        ystring (str): y-axis label for yname
 
     """
 
-    ## initialize variables for across mice data
-    bwm_n_trials_hi = []; bwm_k0_hi = []; bwm_k1_hi = []; bwm_k2_hi = []; bwm_k3_hi = []; bwm_k4_hi = [] ## high contrast
-    bwm_n_trials_lo = []; bwm_k0_lo = []; bwm_k1_lo = []; bwm_k2_lo = []; bwm_k3_lo = []; bwm_k4_lo = [] ## low contrast
-    bwm_n_trials_ze = []; bwm_k0_ze = []; bwm_k1_ze = []; bwm_k2_ze = []; bwm_k3_ze = []; bwm_k4_ze = [] ## zero contrast
+    bwm_data = [[] for _ in range(18)]  # Initialize list for all data points
+
+    for subject_name in mouse_names:
+        with open(Path(data_path, "results", f"{subject_name}.k_groups_{yname}"), "rb") as f:
+            data = pickle.load(f)
+            for i, val in enumerate(data):
+                bwm_data[i].append(val)
     
-    ## process each individual mouse
-    for i in range(len(mouse_names)):
-        subject_name = mouse_names[i]
-        #preprocess_per_mouse(subject_name)
-        build_k_groups_per_mouse(subject_name, yname, ystring)
-        print(f"{subject_name}: done")
+    # Plotting for high, low, and zero contrast across all mice
+    contrast_labels = ['high', 'low', 'zero']
+    idx = np.arange(0,18,6)
 
-        ## store variables for across mice data 
-        f = open(f"/nfs/gatsbystor/naureeng/{subject_name}.k_groups_{yname}", 'rb')
-        data = pickle.load(f)
-        [k0_hi, k1_hi, k2_hi, k3_hi, k4_hi, n_trials_hi, k0_lo, k1_lo, k2_lo, k3_lo, k4_lo, n_trials_lo, k0_ze, k1_ze, k2_ze, k3_ze, k4_ze, n_trials_ze] = data
-        bwm_k0_hi.append(k0_hi); bwm_k1_hi.append(k1_hi); bwm_k2_hi.append(k2_hi); bwm_k3_hi.append(k3_hi); bwm_k4_hi.append(k4_hi); bwm_n_trials_hi.append(n_trials_hi)
-        bwm_k0_lo.append(k0_lo); bwm_k1_lo.append(k1_lo); bwm_k2_lo.append(k2_lo); bwm_k3_lo.append(k3_lo); bwm_k4_lo.append(k4_lo); bwm_n_trials_lo.append(n_trials_lo)
-        bwm_k0_ze.append(k0_ze); bwm_k1_ze.append(k1_ze); bwm_k2_ze.append(k2_ze); bwm_k3_ze.append(k3_ze); bwm_k4_ze.append(k4_ze); bwm_n_trials_ze.append(n_trials_ze)
-
-    ## plot all mice
-    plot_four_boxplot_grps(bwm_n_trials_hi, bwm_k0_hi, bwm_k1_hi, bwm_k2_hi, bwm_k3_hi, bwm_k4_hi, f"high contrast (N = {len(bwm_k1_hi)} mice)", f"high_contrast_K_four_groups_{yname}", "", "k = 0", "k = 1", "k = 2", "k = 3", "k >= 4", ystring)
-    plot_four_boxplot_grps(bwm_n_trials_lo, bwm_k0_lo, bwm_k1_lo, bwm_k2_lo, bwm_k3_lo, bwm_k4_lo, f"low contrast (N = {len(bwm_k1_lo)} mice)", f"low_contrast_K_four_groups_{yname}", "", "k = 0", "k = 1", "k = 2", "k = 3", "k >= 4", ystring)
-    plot_four_boxplot_grps(bwm_n_trials_ze, bwm_k0_ze, bwm_k1_ze, bwm_k2_ze, bwm_k3_ze, bwm_k4_ze, f"zero contrast (N = {len(bwm_k1_ze)} mice)", f"zero_contrast_K_four_groups_{yname}", "", "k = 0", "k = 1", "k = 2", "k = 3", "k >= 4", ystring)
-
+    for i in range(len(contrast_labels)):
+        start = idx[i]
+        plot_four_boxplot_grps(bwm_data[start:start+6][-1], bwm_data[start:start+6], ["k = 0", "k = 1", "k = 2", "k = 3", "k >= 4"], f"N = {len(mouse_names)} mice", "# of wheel direction changes", ystr, yname, Path(data_path, f"{contrast_labels[i]}_contrast_{yname}"), "Mann-Whitney", figure_size=(10,8))
 
 if __name__=="__main__":
 
-    ## [1] load data 
-    mouse_names = np.load(f"/nfs/gatsbystor/naureeng/mouse_names.npy", allow_pickle=True)
-    print(len(mouse_names), "mice")
+    ## analysis per mouse
+    pth_dir = '/nfs/gatsbystor/naureeng/' ## state path
+    pth_res = Path(pth_dir, 'results')
+    pth_res.mkdir(parents=True, exist_ok=True)
+    mouse_names = np.load(Path(pth_dir, "mouse_names.npy"), allow_pickle=True) ## load mouse_names
 
-    ## [2] process all mice
-    compute_across_mice(mouse_names, "feedbackType", "proportion correct")
-    compute_across_mice(mouse_names, "rms", "RMS [deg/sec]")
-    compute_across_mice(mouse_names, "speed", "speed [deg/sec]")
-    compute_across_mice(mouse_names, "duration", "duration [sec]")
+    ## pre-process per mouse
+    [preprocess_per_mouse(subject_name, pth_dir) for subject_name in mouse_names]
+
+    ## build plots
+    for yname, ystr in [("feedbackType", "proportion correct"),
+                         ("rms", "RMS [deg/sec]"),
+                         ("speed", "speed [deg/sec]")]:
+
+        [build_k_groups_per_mouse(subject_name, yname, ystr, pth_dir) for subject_name in mouse_names] ## plot per mouse
+        compute_across_mice(mouse_names, yname, ystr, pth_dir) ## plot across mice

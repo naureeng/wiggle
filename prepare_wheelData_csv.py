@@ -5,19 +5,22 @@ import os
 from RT_dist_plot import *
 import pickle
 from wheel_utils import *
-
+from pathlib import Path
 
 def compute_wheel_data(wheel, n_trials, eid):
-    """
-    COMPUTE_WHEEL_DATA outputs time and position data for N = 1 session, 1 mouse
+    """ Computes wheel data
 
-    :param wheel: [user-defined object in RT_dist_plot]
-    :param n_trials: #trials [np.array] 
-    :param eid: session name [string]
-    :return time data [list]
-    :return position data [list]
-    :return motionOnset indices [list]
-    :return responseTime indices [list]
+    Outputs time and position data for N = 1 session, 1 mouse
+    
+    Args:
+        wheel (user-defined object): output of RT_dist_plot
+        n_trials (int): #trials
+        eid (str): session
+    Returns:
+        t_eid (list): time data [sec]
+        p_eid (list): position data [deg]
+        motionOnset_eid_idx (int): index for motionOnset in t_eid and p_eid
+        responseTime_eid_idx (int): index for responseTime in t_eid and p_eid
 
     """
     trials = one.load_object(eid, 'trials')
@@ -54,14 +57,19 @@ def compute_wheel_data(wheel, n_trials, eid):
     return t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx
 
 
-def prepare_wheel_data_single_csv(mouse, eid):
-    """
-    PREPARE_WHEEL_DATA_SINGLE_CSV outputs csv for N = 1 session, 1 mouse
+def prepare_wheel_data_single_csv(subject_name, eid, path):
+    """Prepare wheel csv 
 
-    :param mouse: mouse name [string]
-    :param eid: session name [string]
-    :returns csv file: written to "/nfs/gatsbystor/naureeng/{mouse}/{eid}/{eid}_wheelData.csv" 
-    
+    Outputs wheel csv for N = 1 session, 1 mouse
+
+    Args:
+        subject_name (str): mouse name
+        eid (str): session
+        path (str): directory to save files
+
+    Returns:
+        eid (str): session (if csv made)
+
     """
     df = pd.DataFrame([], columns=["eid", "trial_no", "contrast", "block", "goCueRT", "stimOnRT", "duration", "choice", "feedbackType", "first_wheel_move", "last_wheel_move", "n_extrema", "rms", "speed"])
 
@@ -73,14 +81,9 @@ def prepare_wheel_data_single_csv(mouse, eid):
     
     ## include sessions with >=400 trials and complete wheel data  
     if n_trials >=400 and len(wheel.movement_directions)==n_trials: 
-        path = f"/nfs/gatsbystor/naureeng/{mouse}/{eid}/trials/"
-        # Check whether the specified path exists or not
-        isExist = os.path.exists(path)
-        if not isExist:
-           # Create a new directory because it does not exist
-           os.makedirs(path)
-           print("The new directory is created!")
-        
+        ## create the directory if it does not exist
+        Path(path).mkdir(parents=True, exist_ok=True)
+
         ## build contrast array
         trials.contrast = np.empty(n_trials)
         contrastRight_idx = np.where(~np.isnan(trials.contrastRight))[0]
@@ -90,7 +93,7 @@ def prepare_wheel_data_single_csv(mouse, eid):
 
         ## compute wheel statistics 
         t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx = compute_wheel_data(wheel, n_trials, eid)
-        n_extrema = compute_n_extrema(t_eid, p_eid, n_trials) ## compute k
+        n_extrema = compute_n_extrema(t_eid, p_eid, n_trials) ## compute k 
         rms = compute_rms(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trials) ## compute rms
         speed = compute_speed(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trials, n_extrema) ## compute speed
 
@@ -111,6 +114,9 @@ def prepare_wheel_data_single_csv(mouse, eid):
         df["speed"] = speed
 
         ## save df as sv
-        df.to_csv(f"/nfs/gatsbystor/naureeng/{mouse}/{eid}/{eid}_wheelData.csv", index=False)
-        print("csv saved")
-
+        csv_path = Path(path) / subject_name / f"{eid}/{eid}_wheelData.csv"
+        df.to_csv(csv_path, index=False)
+        print(f"{str(csv_path)} saved")
+        return eid
+    else:
+        return None

@@ -8,10 +8,6 @@ import scipy.stats as scist
 import matplotlib.pyplot as plt
 import sys
 
-from brainbox.io.one import load_wheel_reaction_times
-import brainbox.behavior.wheel as wh
-from ibllib.io.extractors.ephys_fpga import extract_wheel_moves
-
 from math import *
 from one.api import ONE, alfio
 from os import path

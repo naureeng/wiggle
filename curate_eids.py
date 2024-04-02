@@ -1,44 +1,38 @@
-## curate data
-
 ## import dependencies
 import numpy as np
 from one.api import ONE
-import os
+from pathlib import Path
 from prepare_wheelData_csv import *
 one = ONE()
 
-def curate_eids_mouse(subject_name):
-    """
-    CURATE_EIDS_MOUSE outputs csv with wheelData "{eid}_wheelData.csv" for N = 1 session, 1 mouse
+def curate_eids_mouse(subject_name, data_path):
+    """Obtains sessions per mouse.
 
-    :param subject_name: mouse name [string]
-    :return eids_final: wheel data sessions [list]
+    Curates sessions for N = 1 mouse.
+
+    Args:
+        subject_name (str): mouse name
+        data_path (str): path to data files
+
+    Returns:
+        eids_final (list): sessions with valid wheel data
 
     """
 
     eids = one.search(subject=subject_name, data="trials.table")
-    for i in range(len(eids)):
-        eid = eids[i]
+
+    eids_final = [] ## initialize 
+
+    for eid in eids:
         try:
-            prepare_wheel_data_single_csv(subject_name, eid)
-        except:
-            print("eid issue with wheel data")
-
-    csv_check = [os.path.exists(f"/nfs/gatsbystor/naureeng/{subject_name}/{eid}/{eid}_wheelData.csv") for eid in eids]
-    idx_remove = [i for i in range(len(csv_check)) if csv_check[i]==False]
-    eids_final = np.delete(eids, idx_remove)
-
-    path = f"/nfs/gatsbystor/naureeng/{subject_name}/"
-    # Check whether the specified path exists or not
-    isExist = os.path.exists(path)
-    if not isExist:
-       # Create a new directory because it does not exist
-       os.makedirs(path)
-       print("The new directory is created!")
-
-    np.save(f"/nfs/gatsbystor/naureeng/{subject_name}/{subject_name}_eids_wheel.npy", list(eids_final))
-    print(f"{subject_name}: {len(eids_final)} sessions")
-    print("eids saved")
+            processed_eid = prepare_wheel_data_single_csv(subject_name, eid, data_path)
+            if processed_eid is not None:
+                eids_final.append(processed_eid)
+        except Exception as e:
+            print(f"Error processing session {eid}: {str(e)}")
+    
+    np.save(Path(data_path) / subject_name / f"{subject_name}_eids_wheel.npy", eids_final)
+    print(f"{subject_name}: {len(eids_final)} sessions with valid wheel data saved.")
 
     return eids_final
 
