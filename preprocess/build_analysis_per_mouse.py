@@ -21,7 +21,6 @@ def build_mouse_wheel_csv(subject_name, data_path):
 
     ## concatenate csvs
     df_csv_concat = pd.concat([pd.read_csv(file) for file in csv_files], ignore_index=True)
-    print(df_csv_concat)
     df_csv_concat.to_csv(Path(data_path, subject_name, f"{subject_name}_total.csv"), index=False)
     print("dataframe saved to csv")
 
@@ -61,23 +60,45 @@ def build_prop_wiggle_vs_accuracy(subject_name, data_path):
     return low_contrast_accu_mouse, low_contrast_wiggle_mouse
 
 
-def build_fix_K_speed_accu(subject_name, data_path, K):
+def build_fix_K_speed_accu(subject_name, data_path, K, min_trials=30, bin_width=10):
+    """Computes speed vs accuracy for a given #extrema
+
+    Args:
+        subject_name (str): mouse name
+        data_path (str): path to data files 
+        K (int): # extrema
+        min_trials (int): threshold for #trials per bin
+        bin_width (int): speed bin size [deg/sec]
+
+    Returns:
+        low_contrast_speed_K (list): mean speed across bins per mouse
+        low_contrast_accu_K (list): mean accuracy across bins per mouse
+
+    """
     df_mouse = pd.read_csv(Path(data_path, subject_name, f"{subject_name}_total.csv"))
     df_mouse["feedbackType"] = df_mouse["feedbackType"].replace(-1,0)
-    low_contrast_data = df_mouse.query(f"abs(goCueRT-stimOnRT)<=0.05 and abs(contrast)==0.0625 and duration<=1 and n_extrema=={K}")
+   
+    ## use K >= 4 to increase fraction of data
+    if K == 4:
+        low_contrast_data = df_mouse.query(f"abs(goCueRT-stimOnRT)<=0.05 and abs(contrast)==0.0625 and duration<=1 and n_extrema>={K}")
+    else:
+        low_contrast_data = df_mouse.query(f"abs(goCueRT-stimOnRT)<=0.05 and abs(contrast)==0.0625 and duration<=1 and n_extrema=={K}")
 
-    speed_bins = np.arange(0,300,10)
-    low_contrast_speed_K = []; low_contrast_accu_K = []
-    for i in range(len(speed_bins)-1):
+    ## compute speed and accuracy per speed bin
+    speed_bins = np.arange(0, 300, bin_width)
+    low_contrast_speed_K = []
+    low_contrast_accu_K = []
+
+    for i in range(len(speed_bins) - 1):
         start_bin = speed_bins[i]
-        end_bin = speed_bins[i+1]
-        low_contrast_bin = low_contrast_data.query(f"speed>={start_bin} and speed<{end_bin}")
+        end_bin = speed_bins[i + 1]
+        bin_mask = (low_contrast_data["speed"] >= start_bin) & (low_contrast_data["speed"] < end_bin)
+        bin_data = low_contrast_data[bin_mask]
 
-        if len(low_contrast_bin)>=10: ## check that there is at least ten trials
-            print(len(low_contrast_bin), "#trials in bin")
-            low_contrast_accu_bin = low_contrast_bin["feedbackType"].mean()
-            low_contrast_speed_bin = low_contrast_bin["speed"].mean()
-            low_contrast_speed_K.append(low_contrast_speed_bin); low_contrast_accu_K.append(low_contrast_accu_bin)
+        if len(bin_data) >= min_trials: ## filter data by #trials
+            accu_bin = bin_data["feedbackType"].mean()
+            speed_bin = bin_data["speed"].mean()
+            low_contrast_speed_K.append(speed_bin)
+            low_contrast_accu_K.append(accu_bin)
 
     return low_contrast_speed_K, low_contrast_accu_K
-
