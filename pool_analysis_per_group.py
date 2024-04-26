@@ -11,7 +11,10 @@ pth_res = Path(pth_dir, 'results')
 pth_res.mkdir(parents=True, exist_ok=True)
 mouse_names = np.load(Path(pth_dir, "mouse_names.npy"), allow_pickle=True) ## load mouse_names
 
-## compute avg imagesc plot in good wigglers vs bad wigglers
+## compute slope across mice
+
+
+
 slope = np.load(f"/nfs/gatsbystor/naureeng/slope.npy")
 pos_slope = np.where(slope>0)[0]
 print(len(pos_slope), "mice")

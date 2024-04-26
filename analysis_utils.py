@@ -4,6 +4,8 @@
 from pathlib import Path
 import numpy as np
 import pandas as pd
+import pickle
+from scipy.stats import pearsonr
 
 def compute_wiggle_var_by_grp(subject_name, eids, contrast_value, yname, data_path):
     """ Perform wiggle analysis per mouse. 
@@ -93,3 +95,22 @@ def save_average_data(subject_name, data_n_extrema_mouse, accu_mouse, data_path)
     data_90 = [data_n_extrema_mouse[i] for i in perf_90]
     avg_mouse_data_90 = pd.DataFrame(data_90).mean()
     np.save(Path(data_path).joinpath(f"{subject_name}/{subject_name}_avg_prop_wiggle_90.npy"), avg_mouse_data_90.values.tolist())
+
+
+def compute_pearsonr_wheel_accu(subject_name, data_path):
+    """Compute Pearson r correlation coefficient between # of wheel direction changes vs proportion correct
+
+    Args:
+        subject_name (str): mouse name
+
+    """
+    k = np.arange(0,5,1)
+    ## read pickle file
+    pth_data = Path(data_path).joinpath(f"results/{subject_name}.k_groups_feedbackType")
+    with open (pth_data, "rb") as f:
+        x = pickle.load(f)
+        data = x[6:11] ## indices of low contrast data
+        r = pearsonr(k, data).statistic
+
+    return r
+
