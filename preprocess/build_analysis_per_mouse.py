@@ -15,13 +15,13 @@ def build_mouse_wheel_csv(subject_name, data_path):
 
     """
     
-    eids = np.load(Path(data_path, subject_name, f"{subject_name}_eids_wheel.npy"))
+    eids = np.load(Path(data_path, subject_name, f"{subject_name}_eids_glm_hmm.npy"))
     print(f"{subject_name}: {len(eids)} sessions")
-    csv_files = [Path(data_path, subject_name, f"{eid}/{eid}_wheelData.csv") for eid in eids]
+    csv_files = [Path(data_path, subject_name, f"{eid}/{eid}_glm_hmm.csv") for eid in eids]
 
     ## concatenate csvs
     df_csv_concat = pd.concat([pd.read_csv(file) for file in csv_files], ignore_index=True)
-    df_csv_concat.to_csv(Path(data_path, subject_name, f"{subject_name}_total.csv"), index=False)
+    df_csv_concat.to_csv(Path(data_path, subject_name, f"{subject_name}_glm_hmm.csv"), index=False)
     print("dataframe saved to csv")
 
 
