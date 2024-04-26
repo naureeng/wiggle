@@ -7,12 +7,14 @@ import sys
 import seaborn as sns
 from numpy import nan
 from scipy.stats import pearsonr
+from itertools import chain
+import pickle
 
 pth_dir = "/nfs/gatsbystor/naureeng/"
 sys.path.append(Path(pth_dir, "wiggle"))
 from plot_utils import *
 
-def plot_xval_vs_yval(subject_name, data_path, xval, yval, xstr, ystr, tstr):
+def plot_xval_vs_yval(subject_name, data_path, xval, yval, xstr, ystr, tstr, pstr):
     """Obtains scatterplot of two variables with line of best fit and Pearson correlation coefficient
 
     Args:
@@ -23,6 +25,7 @@ def plot_xval_vs_yval(subject_name, data_path, xval, yval, xstr, ystr, tstr):
         xstr (str): x-axis label
         ystr (str): y-axis label
         tstr (str): plot title
+        pstr (str): path folder name
     
     """
     svfg = plt.figure(figsize=(10,8))
@@ -52,37 +55,84 @@ def plot_xval_vs_yval(subject_name, data_path, xval, yval, xstr, ystr, tstr):
     ## remove spines
     sns.despine(trim=False, offset=8)
 
-    ## tight layout and display plot
+    ## tight layout
     plt.tight_layout()
-    plt.show()
 
-def plot_imagesc(subject_name, pth_dir):
-    """Displays data as scaled color plot 
+    ## save plot
+    pth_res = Path(data_path, f"wiggle/results/{pstr}/")
+    pth_res.mkdir(parents=True, exist_ok=True)
+    svfg.savefig(Path(pth_res, f"{subject_name}_{pstr}.png"), dpi=300)
+
+
+def plot_color_plot(subject_name, data_n_extrema_mouse, color_map, data_path, fig_dim, color_map_lim, img_name):
+    """Plot scaled colorplot of data
 
     Args:
         subject_name (str): mouse name
-        pth_dir (str): path to data files 
+        data_n_extrema_mouse (list): sessions x stimulus contrast on mean # of changes in wheel direction
+        color_map (str): heatmap for data
+        data_path (str): data path to store files 
+        fig_dim (arr): (width, height) of figure
+        color_map_lim (list): [lower bound, upper bound] of color_map
+        img_name (str): image name to include in stored data_path
 
     """
-
-    data_n_extrema_mouse = []
-
-    eids = np.load(Path(pth_dir, subject_name, f"{subject_name}_eids_wheel.npy"))
-    for eid in eids:
-        df_eid = pd.read_csv(Path(pth_dir, subject_name, eid, f"{eid}_wheelData.csv"))
-        threshold = 2
-        df_eid['wiggle'] = df_eid['n_extrema'].gt(threshold).astype(int)
-        contrast_values = df_eid["contrast"].nunique()
-        if contrast_values == 9:
-            data_n_extrema = df_eid.groupby("contrast")["n_extrema"].mean().tolist()
-            data_n_extrema_mouse.append(data_n_extrema)
-
-    gb = pd.DataFrame(data_n_extrema_mouse)
-    plt.figure(figsize=(10,8))
-    set_figure_style()
-    im = plt.imshow(gb, cmap="coolwarm")
-    cb = plt.colorbar(im, orientation='vertical').set_label(label='mean # of wheel direction changes', size=22)
-    plt.clim([0,5])
-    plt.tight_layout()
+    svfg = plt.figure(figsize=fig_dim)
+    plt.imshow(data_n_extrema_mouse, cmap=color_map)
+    plt.colorbar(orientation="vertical").set_label(label="mean # of wheel direction changes", size=18)
+    plt.clim(color_map_lim)
     plt.axis("off")
-    plt.show()
+    plt.tight_layout()
+
+    ## save plot
+    pth_res = Path(data_path).joinpath(f"wiggle/results/{img_name}")
+    pth_res.mkdir(parents=True, exist_ok=True)
+    svfg.savefig(Path(pth_res).joinpath(f"{subject_name}_{img_name}.png"), dpi=300)
+    print(f"{subject_name}: {img_name} colorplot saved")
+
+
+def plot_glm_hmm_data(subject_name, data_path):
+
+    ## load data
+    with open(f"{subject_name}_glm_hmm.pkl", "rb") as f:
+        data = pickle.load(f)
+        [state_1, state_2, state_3] = data
+    
+    ## set colorscheme
+    states = [state_1, state_2, state_3]
+    colors = ["tab:orange", "tab:green", "tab:blue"]
+
+    ## make DataFrame 
+
+    for i in range(len(states)):
+        data = pd.DataFrame(states[i])
+
+        ## define x-axis range
+        xval = np.arange(0,5,1)
+
+        ## plot data
+        svfg = plt.figure(figsize=(10,8))
+        set_figure_style()
+        ax = sns.boxplot(data = data.T, boxprops=dict(facecolor=colors[i], color=colors[i], alpha=0.5), linewidth=3, showfliers=False)
+        sns.stripplot(data = data.T, jitter=True, edgecolor=colors[i], ax=ax, linewidth=3, color=colors[i])
+
+        ## plot labels and title
+        plt.xticks(xval, ["k = 0", "k = 1", "k = 2", "k = 3", "k >= 4"], fontsize=28)
+        plt.xlabel("# of wheel direction changes", fontsize=28)
+        plt.ylabel(f"proportion of data in state {i+1}", fontsize=28)
+        plt.title(f"3-state GLM-HMM {subject_name}: state {i+1}", fontsize=28, fontweight="bold")
+
+        ## adjust plot limits
+        plt.ylim([-0.05,1.05])
+
+        ## remove spines
+        sns.despine(trim=False, offset=8)
+
+        ## tight layout
+        plt.tight_layout()
+
+        ## save plot
+        pth_res = Path(data_path, f"wiggle/results/glm_hmm/state_{i}/")
+        pth_res.mkdir(parents=True, exist_ok=True)
+        svfg.savefig(Path(pth_res, f"{subject_name}_state_{i}.png"), dpi=300)
+
