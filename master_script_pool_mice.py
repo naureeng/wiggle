@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
 from analysis_utils import compute_pearsonr_wheel_accu
+import pickle
+from plot_utils import plot_boxplot, save_plot
 
 ## obtain mouse names
 pth_dir = '/nfs/gatsbystor/naureeng/' ## state path
@@ -52,8 +54,38 @@ def sort_mice(mouse_names, data_path):
     np.save(Path(data_path).joinpath(f"good_wigglers.npy"), pos_mouse_names)
     np.save(Path(data_path).joinpath(f"bad_wigglers.npy"), neg_mouse_names)
 
+def plot_K_feedbackType_group(mouse_names, data_path, img_name):
+    """Plot # of wheel direction changes vs proportion correct in group of mice
+
+    Args:
+        mouse_names (list): list of strings of mouse names
+        data_path (str): data path to store files
+        img_name (str): file name to add to data_path
+    """
+
+    bwm_data = []
+    for i in range(len(mouse_names)):
+        subject_name = mouse_names[i]
+        with open (Path(data_path).joinpath(f"results/{subject_name}.k_groups_feedbackType"), "rb") as f:
+            x = pickle.load(f)
+            data = x[6:11] ## indices of low contrast values
+            bwm_data.append(data)
+
+    final_data = pd.DataFrame(bwm_data)
+    final_data = final_data.dropna()
+
+    bwm_df = pd.read_csv(Path(data_path).joinpath("final_eids/mouse_names.csv"))
+    final_data["Count"] = bwm_df["n_sessions"] ## to weigh boxplot data by #sessions
+
+    plot_boxplot(final_data, f"N = {len(mouse_names)} mice", "# of wheel direction changes", "proportion correct", [0,1,2,3,4], "Mann-Whitney", figure_size=(10,8))
+    save_plot("/nfs/gatsbystor/naureeng", f"{img_name}_low_contrast_feedbackType.png")
+
+
 ## main script
 if __name__=="__main__":
     #compute_pearsonr_across_mice(mouse_names, pth_dir)
-    sort_mice(mouse_names, pth_dir)
+    #sort_mice(mouse_names, pth_dir)
 
+    for group in ["good", "bad"]:
+        wigglers = np.load(Path(pth_dir, f"{group}_wigglers.npy"))
+        plot_K_feedbackType_group(wigglers, pth_dir, f"{group}_wigglers")

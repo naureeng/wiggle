@@ -61,6 +61,7 @@ def prepare_data_for_boxplot(x_data, x_labels, trial_counts):
     Args:
         x_data (list of array-like): data arrays for each group
         x_labels (list of str): labels for each group
+        trial_counts (list): #trials for each group
 
     Returns:
         data (list): data values with corresponding group labels
