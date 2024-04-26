@@ -1,4 +1,5 @@
 ## import dependencies
+import statistics
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -7,12 +8,16 @@ from pathlib import Path
 from analysis_utils import compute_pearsonr_wheel_accu
 import pickle
 from plot_utils import plot_boxplot, save_plot
+import sys
 
 ## obtain mouse names
 pth_dir = '/nfs/gatsbystor/naureeng/' ## state path
 pth_res = Path(pth_dir, 'results')
 pth_res.mkdir(parents=True, exist_ok=True)
 mouse_names = np.load(Path(pth_dir, "mouse_names.npy"), allow_pickle=True) ## load mouse_names
+
+sys.path.append(Path(pth_dir, "wiggle/plotting/"))
+from plotting.plot_analysis_per_mouse import *
 
 def compute_pearsonr_across_mice(mouse_names, data_path):
     """Compute Pearson r correlation coefficent between # of wheel direction changes and proportion correct across mice
@@ -80,6 +85,22 @@ def plot_K_feedbackType_group(mouse_names, data_path, img_name):
     plot_boxplot(final_data, f"N = {len(mouse_names)} mice", "# of wheel direction changes", "proportion correct", [0,1,2,3,4], "Mann-Whitney", figure_size=(10,8))
     save_plot("/nfs/gatsbystor/naureeng", f"{img_name}_low_contrast_feedbackType.png")
 
+def save_group_color_plot(mouse_names, data_path, file_name, group_name):
+    """Plot scaled color plot in group of mice
+
+    Args:
+
+    """
+    data_extrema = []
+    for i in range(len(mouse_names)):
+        subject_name = mouse_names[i]
+        avg_mouse_data = np.load(Path(pth_dir).joinpath(f"{subject_name}/{subject_name}_{file_name}.npy"))
+        if len(avg_mouse_data)==9:
+            data_extrema.append(avg_mouse_data)
+    
+    group_data = np.mean(data_extrema[1:], axis=0) ## remove data not appended with remainder of matrices
+    avg_group = pd.DataFrame(group_data)
+    plot_color_plot("", avg_group.T, "coolwarm", data_path, (3,5), [1,3], group_name)
 
 ## main script
 if __name__=="__main__":
@@ -89,3 +110,6 @@ if __name__=="__main__":
     for group in ["good", "bad"]:
         wigglers = np.load(Path(pth_dir, f"{group}_wigglers.npy"))
         plot_K_feedbackType_group(wigglers, pth_dir, f"{group}_wigglers")
+        save_group_color_plot(wigglers, pth_dir, "avg_prop_wiggle", f"{group}_wigglers")
+        save_group_color_plot(wigglers, pth_dir, "avg_prop_wiggle_90", f"{group}_90_wigglers")
+

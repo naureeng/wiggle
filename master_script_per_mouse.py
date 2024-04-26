@@ -46,7 +46,6 @@ if __name__=="__main__":
     avg_mouse_data_90 = np.load(Path(pth_dir).joinpath(f"{subject_name}/{subject_name}_avg_prop_wiggle_90.npy"))
     plot_color_plot(subject_name, pd.DataFrame(avg_mouse_data_90).T, "coolwarm", pth_dir, (3,4), [1,3], "avg_imagesc_90")
 
-
     ## GLM-HMM state vs wiggles
     #build_mouse_GLM_HMM_csv(subject_name, pth_dir)
     #build_mouse_wheel_csv(subject_name, pth_dir)
@@ -64,4 +63,3 @@ if __name__=="__main__":
     
     ## plot data
     #plot_glm_hmm_data(subject_name, pth_dir)
-        
