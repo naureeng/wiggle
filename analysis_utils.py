@@ -1,4 +1,7 @@
+## analysis functions
+
 ## import dependencies
+from pathlib import Path
 import numpy as np
 import pandas as pd
 
@@ -40,3 +43,53 @@ def compute_wiggle_var_by_grp(subject_name, eids, contrast_value, yname, data_pa
                 group_data[k].append(group_mean)
 
     return tuple(group_data), trial_counts
+
+
+def load_data(subject_name, data_path):
+    """Load data for a given subject
+    
+    Args:
+        subject_name (str): mouse name
+        data_path (str): data path to store files
+    
+    Returns:
+        data_n_extrema_mouse (list): sessions x stimulus contrast data on mean # of changes in wheel direction
+        accu_mouse (list): accuracies across sessions
+
+    """
+
+    eids = np.load(Path(data_path).joinpath(subject_name, f"{subject_name}_eids_wheel.npy"))
+    data_n_extrema_mouse = []; accu_mouse = []
+    for eid in eids:
+        df_eid = pd.read_csv(Path(data_path).joinpath(subject_name, eid, f"{eid}_wheelData.csv")) 
+        threshold = 2 ## definition of wiggle is >=2 changes in wheel direction
+        df_eid["wiggle"] = df_eid["n_extrema"].gt(threshold).astype(int) ## filter dataframe by threshold
+        contrast_values = df_eid["contrast"].nunique()
+        df_eid["feedbackType"] = df_eid["feedbackType"].replace(-1,0) ## to compute accuracy by mean
+
+        if contrast_values == 9: ## full stimulus set presentation
+            data_n_extrema = df_eid.groupby("contrast")["n_extrema"].mean().tolist()
+            data_n_extrema_mouse.append(data_n_extrema)
+            accu_mouse.append(df_eid["feedbackType"].mean().tolist())
+
+    return data_n_extrema_mouse, accu_mouse
+
+
+def save_average_data(subject_name, data_n_extrema_mouse, accu_mouse, data_path):
+    """Save average data for a given subject as npy file
+
+    Args:
+        subject_name (str): mouse name
+        data_n_extrema_mouse (list): sessions x stimulus contrast data on mean # of changes in wheel direction
+        accu_mouse (list): accuracies across sessions
+        data_path (str): data path to store files
+
+    """
+    avg_data = pd.DataFrame(data_n_extrema_mouse).mean()
+    np.save(Path(data_path).joinpath(f"{subject_name}/{subject_name}_avg_prop_wiggle.npy"), avg_data.values.tolist())
+
+    ## obtain >90% performance sessions
+    perf_90 = np.where(np.array(accu_mouse) >= 0.90)[0] ## indices of sessions
+    data_90 = [data_n_extrema_mouse[i] for i in perf_90]
+    avg_mouse_data_90 = pd.DataFrame(data_90).mean()
+    np.save(Path(data_path).joinpath(f"{subject_name}/{subject_name}_avg_prop_wiggle_90.npy"), avg_mouse_data_90.values.tolist())
