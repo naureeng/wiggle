@@ -90,11 +90,11 @@ def save_average_data(subject_name, data_n_extrema_mouse, accu_mouse, data_path)
     avg_data = pd.DataFrame(data_n_extrema_mouse).mean()
     np.save(Path(data_path).joinpath(f"{subject_name}/{subject_name}_avg_prop_wiggle.npy"), avg_data.values.tolist())
 
-    ## obtain >90% performance sessions
-    perf_90 = np.where(np.array(accu_mouse) >= 0.90)[0] ## indices of sessions
-    data_90 = [data_n_extrema_mouse[i] for i in perf_90]
-    avg_mouse_data_90 = pd.DataFrame(data_90).mean()
-    np.save(Path(data_path).joinpath(f"{subject_name}/{subject_name}_avg_prop_wiggle_90.npy"), avg_mouse_data_90.values.tolist())
+    ## obtain >85% performance sessions
+    perf_85 = np.where(np.array(accu_mouse) >= 0.85)[0] ## indices of sessions
+    data_85 = [data_n_extrema_mouse[i] for i in perf_85]
+    avg_mouse_data_85 = pd.DataFrame(data_85).mean()
+    np.save(Path(data_path).joinpath(f"{subject_name}/{subject_name}_avg_prop_wiggle_85.npy"), avg_mouse_data_85.values.tolist())
 
 
 def compute_pearsonr_wheel_accu(subject_name, data_path):

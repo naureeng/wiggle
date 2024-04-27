@@ -16,10 +16,16 @@ from preprocess.build_analysis_per_mouse import *
 from preprocess.integrate_GLM_HMM import *
 from plotting.plot_analysis_per_mouse import *
 
-if __name__=="__main__":
+
+def per_mouse_analysis(subject_name):
+    """Preprocess one mouse
+
+    Args:
+        subject_name (str): mouse name
+
+    """
     
     ## preprocess one mouse
-    subject_name = "CSHL_003"
 
     ## plot speed vs accuracy for given K
     for K in np.arange(0,5,1): ## K = 0, 1, 2, 3, >=4
@@ -31,7 +37,10 @@ if __name__=="__main__":
 
     ## compute prop wiggle vs accuracy
     low_contrast_accu, low_contrast_wiggle = build_prop_wiggle_vs_accuracy(subject_name, pth_dir)
-    plot_xval_vs_yval(subject_name, pth_dir, low_contrast_wiggle, low_contrast_accu, "mean # of wheel direction changes", "proportion correct", "prop wiggle vs accuracy", "prop_wiggle_vs_accu")
+    try:
+        plot_xval_vs_yval(subject_name, pth_dir, low_contrast_wiggle, low_contrast_accu, "mean # of wheel direction changes", "proportion correct", "prop wiggle vs accuracy", "prop_wiggle_vs_accu")
+    except Exception as e:
+        print(f"not enough sessions to do Pearson correlation")
 
     ## colorplot of prop wiggle
     data_n_extrema_mouse, accu_mouse = load_data(subject_name, pth_dir)
@@ -42,9 +51,9 @@ if __name__=="__main__":
     avg_mouse_data = pd.DataFrame(data_n_extrema_mouse).mean()
     plot_color_plot(subject_name, pd.DataFrame(avg_mouse_data).T, "coolwarm", pth_dir, (3,4), [1,3], "avg_imagesc")
 
-    ## colorplot of avg prop wiggle >90% sessions only
-    avg_mouse_data_90 = np.load(Path(pth_dir).joinpath(f"{subject_name}/{subject_name}_avg_prop_wiggle_90.npy"))
-    plot_color_plot(subject_name, pd.DataFrame(avg_mouse_data_90).T, "coolwarm", pth_dir, (3,4), [1,3], "avg_imagesc_90")
+    ## colorplot of avg prop wiggle >85% sessions only
+    avg_mouse_data_85 = np.load(Path(pth_dir).joinpath(f"{subject_name}/{subject_name}_avg_prop_wiggle_85.npy"))
+    plot_color_plot(subject_name, pd.DataFrame(avg_mouse_data_85).T, "coolwarm", pth_dir, (3,4), [1,3], "avg_imagesc_85")
 
     ## GLM-HMM state vs wiggles
     #build_mouse_GLM_HMM_csv(subject_name, pth_dir)
@@ -63,3 +72,7 @@ if __name__=="__main__":
     
     ## plot data
     #plot_glm_hmm_data(subject_name, pth_dir)
+
+if __name__=="__main__":
+    subject_name = "CSHL_003"
+    per_mouse_analysis(subject_name)
