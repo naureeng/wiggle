@@ -181,7 +181,7 @@ if __name__=="__main__":
         wigglers = np.load(Path(pth_dir, f"{group}_wigglers.npy"))
         plot_K_feedbackType_group(wigglers, pth_dir, f"{group}_wigglers")
         total_data, std_data, raw_total_data = save_group_color_plot(wigglers, pth_dir, "avg_prop_wiggle", f"{group}_wigglers", (3,4), (0,3))
-        data_85, std_85, raw_data_85 = save_group_color_plot(wigglers, pth_dir, "avg_prop_wiggle_85", f"{group}_85_wigglers", (3,4), (0,6))
+        data_85, std_85, raw_data_85 = save_group_color_plot(wigglers, pth_dir, "avg_prop_wiggle_85", f"{group}_85_wigglers", (3,4), (0,3))
         data = [total_data, std_data, data_85, std_85, raw_total_data, raw_data_85]
         with open(Path(pth_dir).joinpath("results", f"{group}.wigglers"), "wb") as f:
             pickle.dump(data, f)

@@ -16,13 +16,11 @@ from preprocess.build_analysis_per_mouse import *
 from preprocess.integrate_GLM_HMM import *
 from plotting.plot_analysis_per_mouse import *
 
-
 def per_mouse_analysis(subject_name):
     """Preprocess one mouse
 
     Args:
         subject_name (str): mouse name
-
     """
     
     ## preprocess one mouse
@@ -56,22 +54,12 @@ def per_mouse_analysis(subject_name):
     plot_color_plot(subject_name, pd.DataFrame(avg_mouse_data_85).T, "coolwarm", pth_dir, (3,4), [1,3], "avg_imagesc_85")
 
     ## GLM-HMM state vs wiggles
-    #build_mouse_GLM_HMM_csv(subject_name, pth_dir)
-    #build_mouse_wheel_csv(subject_name, pth_dir)
+    build_mouse_GLM_HMM_csv(subject_name, pth_dir)
+    build_mouse_wheel_csv(subject_name, pth_dir)
+    build_wiggle_GLM_HMM_analysis(subject_name, pth_dir)
 
-    #state_1 = [build_wiggle_GLM_HMM_analysis(subject_name, pth_dir, K)[0] for K in np.arange(0,5,1)]
-    #state_2 = [build_wiggle_GLM_HMM_analysis(subject_name, pth_dir, K)[1] for K in np.arange(0,5,1)]
-    #state_3 = [build_wiggle_GLM_HMM_analysis(subject_name, pth_dir, K)[2] for K in np.arange(0,5,1)]
-
-    # pickle file
-    #with open(f"{subject_name}_glm_hmm.pkl", "wb") as f:
-        #pickle.dump([state_1, state_2, state_3], f)
-        #print(f"{subject_name} file pickled")
-
-    #colors = ["tab:orange", "tab:green", "tab:blue"]
-    
     ## plot data
-    #plot_glm_hmm_data(subject_name, pth_dir)
+    plot_glm_hmm_data(subject_name, pth_dir)
 
 if __name__=="__main__":
     subject_name = "CSHL_003"
