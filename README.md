@@ -28,6 +28,13 @@ Joseph Lalli, Louison Fresnais, Matt Chan, Nikolay Markov, Oren Amsalem,
 Sebastian Proost, Agamemnon Krasoulis, getzze, & Stefan Repplinger. (2022). 
 Statannotations (v0.6). Zenodo. https://doi.org/10.5281/zenodo.7213391
 
+### install <code>python-ternary</code>
+Install <code>python-ternary</code> to produce ternary plots in Python.
+
+`pip install python-ternary`
+
+Marc Harper et al. (2015). python-ternary: Ternary Plots in Python. Zenodo. 10.5281/zenodo.594435
+
 ## usage
 Run the whole pipeline with `python3 main.py` 
 ## contact
