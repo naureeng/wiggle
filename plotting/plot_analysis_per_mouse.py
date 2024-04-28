@@ -9,6 +9,7 @@ from numpy import nan
 from scipy.stats import pearsonr
 from itertools import chain
 import pickle
+import ternary
 
 pth_dir = "/nfs/gatsbystor/naureeng/"
 sys.path.append(Path(pth_dir, "wiggle"))
@@ -92,47 +93,47 @@ def plot_color_plot(subject_name, data_n_extrema_mouse, color_map, data_path, fi
 
 
 def plot_glm_hmm_data(subject_name, data_path):
+    """Save ternary plot of 3-state GLM-HMM probabilities per mouse
 
-    ## load data
-    with open(f"{subject_name}_glm_hmm.pkl", "rb") as f:
-        data = pickle.load(f)
-        [state_1, state_2, state_3] = data
-    
-    ## set colorscheme
-    states = [state_1, state_2, state_3]
-    colors = ["tab:orange", "tab:green", "tab:blue"]
+    Args:
+        subject_name (str): mouse name
+        data_path (str): path to store data files
 
-    ## make DataFrame 
+    """
 
-    for i in range(len(states)):
-        data = pd.DataFrame(states[i])
+    ## obtain 3-D matrix of 3-state GLM-HMM probabilities
+    eids = np.load(Path(data_path).joinpath(f"{subject_name}/{subject_name}_eids_glm_hmm.npy"), allow_pickle=True)
+    points_mouse = np.load(Path(data_path).joinpath(f"{subject_name}/{subject_name}_points_mouse.npy"), allow_pickle=True)
+    ## compute L2 norm to color-code data 
+    dist = [np.sqrt(points_mouse[i][0]**2 + points_mouse[i][1]**2 + points_mouse[i][2]**2) for i in range(len(points_mouse))]
 
-        ## define x-axis range
-        xval = np.arange(0,5,1)
+    ## scatter plot
+    scale = 1
+    figure, tax = ternary.figure(scale=scale)
+    figure.set_size_inches(12,10)
+    set_figure_style()
+    ## plot points
+    tax.scatter(points_mouse, marker=".", vmin=0.0, vmax=1.0, colormap=plt.cm.viridis, colorbar=True, c=dist, cmap=plt.cm.viridis)
 
-        ## plot data
-        svfg = plt.figure(figsize=(10,8))
-        set_figure_style()
-        ax = sns.boxplot(data = data.T, boxprops=dict(facecolor=colors[i], color=colors[i], alpha=0.5), linewidth=3, showfliers=False)
-        sns.stripplot(data = data.T, jitter=True, edgecolor=colors[i], ax=ax, linewidth=3, color=colors[i])
+    ## set axis labels and Title
+    fontsize = 20
+    offset = 0.14
+    tax.left_axis_label("P(state 3)", fontsize=fontsize, offset=offset)
+    tax.right_axis_label("P(state 2)", fontsize=fontsize, offset=offset)
+    tax.bottom_axis_label("P(state 1)", fontsize=fontsize, offset=offset)
 
-        ## plot labels and title
-        plt.xticks(xval, ["k = 0", "k = 1", "k = 2", "k = 3", "k >= 4"], fontsize=28)
-        plt.xlabel("# of wheel direction changes", fontsize=28)
-        plt.ylabel(f"proportion of data in state {i+1}", fontsize=28)
-        plt.title(f"3-state GLM-HMM {subject_name}: state {i+1}", fontsize=28, fontweight="bold")
+    ## prettify ternary plot
+    tax.get_axes().axis('off')
+    tax.clear_matplotlib_ticks()
+    tax.ticks(axis='lbr', linewidth=0.25, multiple=0.1, tick_formats="%.1f", fontsize=18)
+    tax.boundary(linewidth=3)
+    tax.gridlines(color="black", multiple=0.1, linewidth=0.50)
+    tax.set_title(f"{subject_name} (N = {len(eids)} sessions; {len(points_mouse):,} trials)", fontsize=28, fontweight="bold")
+    tax.gridlines(multiple=0.2, color="black")
 
-        ## adjust plot limits
-        plt.ylim([-0.05,1.05])
+    ## save ternary plots
+    pth_res = Path(data_path).joinpath(f"wiggle/results/ternary_plot/")
+    pth_res.mkdir(parents=True, exist_ok=True)
+    tax.savefig(Path(pth_res).joinpath(f"{subject_name}_ternary_plot.png"), dpi=300)
 
-        ## remove spines
-        sns.despine(trim=False, offset=8)
-
-        ## tight layout
-        plt.tight_layout()
-
-        ## save plot
-        pth_res = Path(data_path, f"wiggle/results/glm_hmm/state_{i}/")
-        pth_res.mkdir(parents=True, exist_ok=True)
-        svfg.savefig(Path(pth_res, f"{subject_name}_state_{i}.png"), dpi=300)
 
