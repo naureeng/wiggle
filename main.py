@@ -29,6 +29,7 @@ def preprocess_per_mouse(subject_name, data_path):
     ## curate eids with csv files per mouse
     curate_eids_mouse(subject_name, data_path)
 
+
 def build_k_groups_per_mouse(subject_name, yname, ystr, data_path):
     """Process one mouse
 
@@ -55,7 +56,6 @@ def build_k_groups_per_mouse(subject_name, yname, ystr, data_path):
     for i in range(len(contrasts)):
         contrast = contrasts[i]
         results, n_trials = compute_wiggle_var_by_grp(subject_name, eids, contrast, yname, data_path)
-
         data.extend([np.median(result) for result in results])
         data.append(int(np.median(n_trials))) ## integer necessary for weighing DataFrame
 
@@ -101,12 +101,12 @@ if __name__=="__main__":
     mouse_names = np.load(Path(pth_dir, "mouse_names.npy"), allow_pickle=True) ## load mouse_names
 
     ## pre-process per mouse
-    [preprocess_per_mouse(subject_name, pth_dir) for subject_name in mouse_names]
+    #[preprocess_per_mouse(subject_name, pth_dir) for subject_name in mouse_names]
 
     ## build plots
-    for yname, ystr in [("feedbackType", "proportion correct"),
-                         ("rms", "RMS [deg/sec]"),
-                         ("speed", "speed [deg/sec]")]:
+    for yname, ystr in [("visual_speed", "visual speed [visual deg/sec]")]: #[("feedbackType", "proportion correct"),
+                         #[("rms", "RMS [deg/sec]"),
+                         #[("visual_speed", "visual speed [visual deg/sec]")]:
 
         [build_k_groups_per_mouse(subject_name, yname, ystr, pth_dir) for subject_name in mouse_names] ## plot per mouse
         compute_across_mice(mouse_names, yname, ystr, pth_dir) ## plot across mice

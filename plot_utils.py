@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
 from statannotations.Annotator import Annotator
+from scipy.stats import pearsonr
 
 
 def reindex_df(df, repeat_col):
@@ -130,7 +131,9 @@ def plot_boxplot(data, tstring, xstring, ystring, order, statistical_test, figur
 
     """
     
-    data_weighted = reindex_df(data, "Count") ## perform weighted average of data based on #trials
+    #data_weighted = reindex_df(data, "Count") ## perform weighted average of data based on #trials
+
+    data_weighted = data
     
     ## plot
     plt.figure(figsize=figure_size)
@@ -142,7 +145,8 @@ def plot_boxplot(data, tstring, xstring, ystring, order, statistical_test, figur
     plt.text(0, 0.05, tstring, fontsize=28, ha="left", fontweight="bold") ## put title as text to prevent overlap with stat annotations
     ## stats
     ax = plt.gca()
-    pairs = [(order[0], order[4]), (order[0], order[2]), (order[2], order[4])]
+    midpt = int(len(order) / 2)
+    pairs = [(order[0], order[-1]), (order[0], order[midpt]), (order[midpt], order[-1])]
     try:
         add_statistical_annotations(ax, pairs, data_weighted, order, statistical_test)
     except:
@@ -176,4 +180,43 @@ def plot_four_boxplot_grps(n_trials, x_data, x_labels, tstr, xstr, ystr, yname, 
     data = prepare_data_for_boxplot(x_data, x_labels, n_trials)
     plot_boxplot(data, tstr, xstr, ystr, x_labels, statistical_test, figure_size=(10,8))
     save_plot(directory, f"{tstr}_{yname}.png")
+
+
+def plot_glm_hmm_engagement(group, data_path, cstring):
+    """Plot proportion engaged per mouse 
+
+    Args:
+        group (str): wiggler group ["good", "neutral", "bad"]
+        data_path (str): data path to store files
+        cstring (str): color hex code
+
+    """
+
+    df = pd.read_csv(Path(data_path, f"glm_hmm_analysis.csv"))
+    df = df[df[['num_engaged_wiggles']].apply(lambda x: x[0].isdigit(), axis=1)] ## remove rows with empty values
+    grp_data = df.query(f"wiggler_group == '{group}'")
+    mean_K = grp_data["mean_K"].values.tolist()
+    median_K = grp_data["median_K"].values.tolist()
+    Pengaged = grp_data["Pdisengaged"].values.tolist()
+    mean_K_int = [eval(mean_K[i]) for i in range(len(mean_K))]
+    median_K_int = [eval(median_K[i]) for i in range(len(median_K))]
+    Pengaged_int = [eval(Pengaged[i]) for i in range(len(Pengaged))]
+
+    svfg = plt.figure(figsize=(8,8))
+    set_figure_style()
+    plt.scatter(mean_K_int, Pengaged_int, 20, c=cstring)
+    xdata = np.array(mean_K_int)
+    ydata = np.array(Pengaged_int)
+    a, b = np.polyfit(xdata, ydata, 1)
+    plt.plot(xdata, xdata*a + b, c=cstring, lw=2)
+    plt.xlabel("mean # of changes in wheel direction", fontsize=28)
+    plt.ylabel("P(disengaged)", fontsize=28)
+    r, pval = pearsonr(xdata, ydata)
+    plt.title(f"N = {len(grp_data)} mice, r = {round(r,2)} and p = {round(pval,2)}", fontsize=28, fontweight="bold")
+    plt.tight_layout()
+    plt.ylim(bottom=0)
+    sns.despine(trim=False, offset=8)
+    plt.show()
+
+
 
