@@ -78,6 +78,7 @@ def plot_color_plot(subject_name, data_n_extrema_mouse, color_map, data_path, fi
         img_name (str): image name to include in stored data_path
 
     """
+
     svfg = plt.figure(figsize=fig_dim)
     plt.imshow(data_n_extrema_mouse, cmap=color_map)
     plt.colorbar(orientation="vertical").set_label(label="mean # of wheel direction changes", size=18)
@@ -116,7 +117,7 @@ def plot_glm_hmm_data(subject_name, data_path):
     tax.scatter(points_mouse, marker=".", vmin=0.0, vmax=1.0, colormap=plt.cm.viridis, colorbar=True, c=dist, cmap=plt.cm.viridis)
 
     ## set axis labels and Title
-    fontsize = 20
+    fontsize = 24
     offset = 0.14
     tax.left_axis_label("P(state 3)", fontsize=fontsize, offset=offset)
     tax.right_axis_label("P(state 2)", fontsize=fontsize, offset=offset)
@@ -135,5 +136,8 @@ def plot_glm_hmm_data(subject_name, data_path):
     pth_res = Path(data_path).joinpath(f"wiggle/results/ternary_plot/")
     pth_res.mkdir(parents=True, exist_ok=True)
     tax.savefig(Path(pth_res).joinpath(f"{subject_name}_ternary_plot.png"), dpi=300)
+
+
+
 
 
