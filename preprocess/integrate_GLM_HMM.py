@@ -113,7 +113,8 @@ def build_wiggle_GLM_HMM_analysis(subject_name, data_path):
     points_mouse = []
     for eid in eids:
         df_eid = pd.read_csv(Path(data_path, subject_name, eid, f"{eid}_glm_hmm.csv"))
-        points_eid = [(df_eid["P_state_1"].iloc[i], df_eid["P_state_2"].iloc[i], df_eid["P_state_3"].iloc[i]) for i in range(len(df_eid))]
+        df_wiggle = df_eid.query("n_extrema >=2 and duration <=1") ## obtain wiggles (trials with >=2 extrema) that are fast (duration <=1 sec)
+        points_eid = [(df_wiggle["P_state_1"].iloc[i], df_wiggle["P_state_2"].iloc[i], df_wiggle["P_state_3"].iloc[i]) for i in range(len(df_wiggle))]
         for i in points_eid: ## save each element
             points_mouse.append(i)
     
@@ -121,4 +122,5 @@ def build_wiggle_GLM_HMM_analysis(subject_name, data_path):
     np.save(Path(data_path).joinpath(f"{subject_name}/{subject_name}_points_mouse.npy"), points_mouse)
 
     return points_mouse
+
 
