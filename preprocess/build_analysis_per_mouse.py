@@ -106,32 +106,3 @@ def build_fix_K_speed_accu(subject_name, data_path, K, min_trials=30, bin_width=
     return low_contrast_speed_K, low_contrast_accu_K
 
 
-def compute_K_data(subject_name, data_path):
-    """Compute visual speed [visual deg/sec] vs accuracy for a fixed # changes in wheel direction (K) 
-
-    Args:
-        subject_name (str): mouse name
-        data_path (str): path to store data files
-
-    Returns:
-        data (list): Pearson correlation coefficient (r) between visual speed [visual deg/sec] and accuracy
-
-    """
-
-    data = []
-    for K in [2,3,4]:
-        low_contrast_speed_K, low_contrast_accu_K = build_fix_K_speed_accu(subject_name, data_path, K)
-        if len(low_contrast_speed_K) >=10: ## minimum of 10 sessions required per mouse to do Pearson correlation
-            try:
-                m = pearsonr(low_contrast_speed_K, low_contrast_accu_K).statistic
-            except:
-                m = np.nan
-            data.append(m)
-        else:
-            print(f"{subject_name} has < 10 data points to compute r")
-            data.append(np.nan)
-
-    return data
-
-
-
