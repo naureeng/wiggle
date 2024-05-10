@@ -131,9 +131,7 @@ def plot_boxplot(data, tstring, xstring, ystring, order, statistical_test, figur
 
     """
     
-    #data_weighted = reindex_df(data, "Count") ## perform weighted average of data based on #trials
-
-    data_weighted = data
+    data_weighted = reindex_df(data, "Count") ## perform weighted average of data based on #trials
     
     ## plot
     plt.figure(figsize=figure_size)

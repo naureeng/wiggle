@@ -41,7 +41,6 @@ def per_mouse_analysis(subject_name):
     except Exception as e:
         print(f"not enough sessions to do Pearson correlation in {subject_name}")
 
-"""
     ## colorplot of prop wiggle
     try:
         data_n_extrema_mouse, accu_mouse = load_data(subject_name, pth_dir)
@@ -77,12 +76,9 @@ def per_mouse_analysis(subject_name):
 
     except Exception as e:
         print(f"no GLM-HMM data for {subject_name}")
-"""
 
 if __name__=="__main__":
-    #subject_name = "CSHL_003"
-    df = pd.read_csv(f"/nfs/gatsbystor/naureeng/final_eids/mouse_names.csv")
-    mouse_names = df["mouse_names"].values.tolist()
-    [per_mouse_analysis(subject_name) for subject_name in mouse_names]
+    subject_name = "CSHL_003"
+    per_mouse_analysis(subject_name)
 
 

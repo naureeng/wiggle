@@ -185,14 +185,6 @@ if __name__=="__main__":
     #compute_pearsonr_across_mice(mouse_names, pth_dir)
     #sort_mice(mouse_names, pth_dir)
 
-    bwm_data = [compute_K_data(mouse_names[i], pth_dir) for i in range(50)]
-    print(bwm_data)
-    #np.save(Path(pth_dir).joinpath("bwm_K_data.npy"), bwm_data)
-
-    #bwm_data = np.load(Path(pth_dir).joinpath("bwm_K_data.npy"))
-    #print(bwm_data)
-    #plot_boxplot(pd.DataFrame(bwm_data), "speed", "#changes in wheel direction", "visual speed vs accuracy correlation (r)", [0, 1, 2], "Mann-Whitney", figure_size=(10,8))
-
 """
     grp_colors = ["#F8766D", "#00BA38", "#619CFF"]
     grp_wiggle = ["good", "neutral", "bad"]
