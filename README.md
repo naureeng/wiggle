@@ -39,7 +39,8 @@ https://zenodo.org/records/2628066
 ## usage
 Run the whole pipeline with `python3 main.py`. <br>
 Run analysis per mouse with `python3 master_script_per_mouse.py`. <br>
-Run analysis per group with `python3 master_script_pool_mice.py`.
+Run analysis per group with `python3 master_script_pool_mice.py`. <br>
+Run speed vs accuracy analysis with `python3 speed_vs_accu_analysis.py`.
 
 ## contact
 E-mail <naureen.ghani.18@ucl.ac.uk> with any questions.
