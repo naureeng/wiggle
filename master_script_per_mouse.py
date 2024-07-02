@@ -6,7 +6,9 @@ import seaborn as sns
 from pathlib import Path
 import sys
 import pickle
-from analysis_utils import load_data, save_average_data, compute_glm_hmm_engagement, convert_wheel_deg_to_visual_deg 
+from analysis_utils import load_data, save_average_data, compute_glm_hmm_engagement, convert_wheel_deg_to_visual_deg, classify_mouse_wiggler 
+from curate_eids import curate_eids_mouse
+from wheel_utils import plot_ballistic_movement
 
 ## import subdirectories
 pth_dir = "/nfs/gatsbystor/naureeng/"
@@ -51,9 +53,6 @@ def per_mouse_analysis(subject_name):
         avg_mouse_data = pd.DataFrame(data_n_extrema_mouse).mean()
         plot_color_plot(subject_name, pd.DataFrame(avg_mouse_data).T, "coolwarm", pth_dir, (3,4), [1,3], "avg_imagesc")
 
-        ## colorplot of avg prop wiggle >85% sessions only
-        avg_mouse_data_85 = np.load(Path(pth_dir).joinpath(f"{subject_name}/{subject_name}_avg_prop_wiggle_85.npy"))
-        plot_color_plot(subject_name, pd.DataFrame(avg_mouse_data_85).T, "coolwarm", pth_dir, (3,4), [1,3], "avg_imagesc_85")
     except Exception as e:
         print(f"not enough data to do scaled color plot in {subject_name}")
 
@@ -79,6 +78,9 @@ def per_mouse_analysis(subject_name):
 
 if __name__=="__main__":
     subject_name = "CSHL_003"
-    per_mouse_analysis(subject_name)
+    curate_eids_mouse(subject_name, pth_dir)
+    plot_ballistic_movement(subject_name, pth_dir)
 
+    #classify_mouse_wiggler(subject_name, pth_dir)
+    #per_mouse_analysis(subject_name)
 

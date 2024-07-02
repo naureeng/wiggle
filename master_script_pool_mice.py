@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
-from analysis_utils import compute_pearsonr_wheel_accu, update_csv_glm_hmm_engagement 
+from analysis_utils import update_csv_glm_hmm_engagement 
 import pickle
 from plot_utils import plot_boxplot, save_plot, set_figure_style
 from scipy.stats import mannwhitneyu, skew
@@ -16,57 +16,42 @@ import sys
 pth_dir = '/nfs/gatsbystor/naureeng/' ## state path
 pth_res = Path(pth_dir, 'results')
 pth_res.mkdir(parents=True, exist_ok=True)
-mouse_names = np.load(Path(pth_dir, "mouse_names.npy"), allow_pickle=True) ## load mouse_names
+#mouse_names = np.load(Path(pth_dir, "mouse_names.npy"), allow_pickle=True) 
 
 sys.path.append(Path(pth_dir, "wiggle/plotting/"))
 sys.path.append(Path(pth_dir, "wiggle/preprocess/"))
 from preprocess.build_analysis_per_mouse import *
 from plotting.plot_analysis_per_mouse import *
 
-def compute_pearsonr_across_mice(mouse_names, data_path):
-    """Compute Pearson r correlation coefficent between # of wheel direction changes and proportion correct across mice
-
-    Args:
-        mouse_names (list): list of strings of mouse names
-
-    """
-    mice_pearsonr_wheel_accu = []
-    for subject_name in mouse_names:
-        try:
-            r = compute_pearsonr_wheel_accu(subject_name, data_path)
-            mice_pearsonr_wheel_accu.append(r) 
-        except Exception as e:
-            print(f"Error processing mouse: {str(e)}")
-
-    np.save(Path(data_path).joinpath(f"mice_pearsonr_wheel_accu.npy"), mice_pearsonr_wheel_accu)
-    print(f"pearson r correlation cofficients saved for N = {len(mouse_names)} mice")
 
 def sort_mice(mouse_names, data_path):
-    """Sort mice by Pearson r correlation coefficient between # of wheel direction changes and proportion correct across mice
-    "good wigglers" (positive correlation), "neutral wigglers" (negligible correlation), "bad wigglers" (negative correlation)
+    """Sort mice based on proportion correct vs # of wheel direction changes per mouse
+    The classifications are good, neutral, and bad wigglers.
     
     Args:
         mouse_names (list): list of strings of mouse names
         data_path (str): data path to store files
 
     """
-    mice_pearsonr_wheel_accu = np.load(Path(data_path).joinpath(f"mice_pearsonr_wheel_accu.npy"))
-    pos_idx = np.where(mice_pearsonr_wheel_accu >= 0.5)[0]
-    neu_idx = np.where( (mice_pearsonr_wheel_accu < 0.5) & (mice_pearsonr_wheel_accu > -0.3))[0]
-    neg_idx = np.where(mice_pearsonr_wheel_accu <= -0.3)[0]
 
-    pos_mouse_names = [mouse_names[i] for i in pos_idx]
-    neu_mouse_names = [mouse_names[i] for i in neu_idx]
-    neg_mouse_names = [mouse_names[i] for i in neg_idx]
+    wiggler_groups = [classify_mouse_wiggler(subject_name, data_path) for subject_name in mouse_names]
 
-    print(len(pos_mouse_names), "good wigglers")
-    print(len(neu_mouse_names), "neutral wigglers")
-    print(len(neg_mouse_names), "bad wigglers")
+    ## initialize dictionary to store mouse names by category
+    wiggler_dict = {"good": [], "neutral": [], "bad": []}
 
-    ## save data
-    np.save(Path(data_path).joinpath(f"good_wigglers.npy"), pos_mouse_names)
-    np.save(Path(data_path).joinpath(f"neu_wigglers.npy"), neu_mouse_names)
-    np.save(Path(data_path).joinpath(f"bad_wigglers.npy"), neg_mouse_names)
+    ## populate dictionary with mouse names based on their classification
+    for mouse, group in zip(mouse_names, wiggler_groups):
+        wiggler_dict[group].append(mouse)
+
+    ## print #mice per classification
+    for category in wiggler_dict:
+        print(len(wiggler_dict[category]))
+
+    ## save classified mouse names to .npy files
+    for category, names in wiggler_dict.items():
+        np.save(Path(data_path).joinpath(f"{category}.npy"), names)
+
+    return wiggler_groups
 
 def plot_K_feedbackType_group(mouse_names, data_path, img_name):
     """Plot # of wheel direction changes vs proportion correct in group of mice
@@ -92,7 +77,8 @@ def plot_K_feedbackType_group(mouse_names, data_path, img_name):
     bwm_df = pd.read_csv(Path(data_path).joinpath("final_eids/mouse_names.csv"))
     final_data["Count"] = bwm_df["n_sessions"] ## to weigh boxplot data by #sessions
 
-    plot_boxplot(final_data, f"N = {len(mouse_names)} mice", "# of wheel direction changes", "proportion correct", [0,1,2,3,4], "Mann-Whitney", figure_size=(10,8))
+    plot_boxplot(final_data, f"N = {len(mouse_names)} mice", "# of wheel direction changes", "proportion correct", [0,1,2,3,4], "Mann-Whitney", figure_size=(8,8))
+
     save_plot("/nfs/gatsbystor/naureeng", f"{img_name}_low_contrast_feedbackType.png")
 
 def save_group_color_plot(mouse_names, data_path, file_name, group_name, fig_dim, color_map_lim):
@@ -134,22 +120,23 @@ def perform_stats_color_plot(data_path, fig_dim, grp_colors):
 
     wiggle_groups = ["good", "neutral", "bad"]
 
-    grp_total_data = []; grp_std_data = []; grp_data_85 = []; grp_std_85 = []; grp_raw_total_data = []; grp_raw_data_85 = []; 
+    grp_total_data = []; grp_std_data = []; grp_raw_total_data = []
     for group in wiggle_groups:
         with open(Path(data_path).joinpath("results", f"{group}.wigglers"), "rb") as f:
             data = pickle.load(f)
-            [total_data, std_data, data_85, std_85, raw_total_data, raw_data_85] = data
-            grp_total_data.append(total_data); grp_std_data.append(std_data); grp_data_85.append(data_85); grp_std_85.append(std_85); 
-            grp_raw_total_data.append(raw_total_data); grp_raw_data_85.append(raw_data_85)
+            [total_data, std_data, raw_total_data] = data
+            grp_total_data.append(total_data); grp_std_data.append(std_data); grp_raw_total_data.append(raw_total_data)
 
     svfg = plt.figure(figsize=fig_dim)
     set_figure_style()
 
+    xval_shift = [0, 0.2, 0.4]
+
     for i in range(len(grp_total_data)):
         xval = np.arange(0,len(grp_total_data[i]),1)
-        plt.plot(xval, grp_data_85[i], lw=3, label=f"{wiggle_groups[i]} wigglers 85% sessions (N = {len(grp_raw_data_85[i])} mice)", color=grp_colors[i])
-        plt.scatter(xval, grp_data_85[i], 60, c=grp_colors[i])
-        plt.errorbar(xval, grp_data_85[i], yerr=grp_std_85[i], alpha=0.3, fmt="o", color=grp_colors[i], ecolor=grp_colors[i], elinewidth=3, capsize=0)
+        #plt.plot(xval, grp_total_data[i], lw=3, label=f"{wiggle_groups[i]} wigglers (N = {len(grp_raw_total_data[i])} mice)", color=grp_colors[i])
+        plt.scatter(xval+xval_shift[i], grp_total_data[i], 60, c=grp_colors[i])
+        plt.errorbar(xval+xval_shift[i], grp_total_data[i], yerr=(1.96*grp_std_data[i])/np.sqrt(len(grp_std_data[i])), alpha=1.0, fmt="o", color=grp_colors[i], ecolor=grp_colors[i], elinewidth=3, capsize=0)
 
     ## plot styling
     stimulus_contrast = ["-100", "-25", "-12.5", "-6.25", "0.0", "6.25", "12.5", "25", "100"]
@@ -161,15 +148,14 @@ def perform_stats_color_plot(data_path, fig_dim, grp_colors):
 
     ## stats
     print(mannwhitneyu(grp_total_data[0], grp_total_data[2]), "total data")
-    print(mannwhitneyu(grp_data_85[0], grp_data_85[2]), "85% data only")
-    print(f"good wigglers-- mean: {np.mean(grp_data_85[0])}, median: {np.median(grp_data_85[2])}, std: {np.std(grp_data_85[2])}")
-    print(f"bad wigglers-- mean: {np.mean(grp_data_85[1])}, median: {np.median(grp_data_85[2])}, std: {np.std(grp_data_85[2])}")
+    print(f"good wigglers-- mean: {np.mean(grp_total_data[0])}, median: {np.median(grp_total_data[2])}, std: {np.std(grp_total_data[2])}")
+    print(f"bad wigglers-- mean: {np.mean(grp_total_data[1])}, median: {np.median(grp_total_data[2])}, std: {np.std(grp_total_data[2])}")
 
     ## stats per contrast group
     for j in range(len(stimulus_contrast)):
-        contrast_good = [grp_raw_data_85[0][i][j] for i in range(len(grp_raw_data_85[0]))]
-        contrast_bad = [grp_raw_data_85[2][i][j] for i in range(len(grp_raw_data_85[2]))]
-        print(mannwhitneyu(contrast_good, contrast_bad), f"85% data at {stimulus_contrast[j]}% contrast")
+        contrast_good = [grp_raw_total_data[0][i][j] for i in range(len(grp_raw_total_data[0]))]
+        contrast_bad = [grp_raw_total_data[2][i][j] for i in range(len(grp_raw_total_data[2]))]
+        print(mannwhitneyu(contrast_good, contrast_bad), f"data at {stimulus_contrast[j]}% contrast")
 
     plt.ylim(bottom = 0)
     plt.tight_layout()
@@ -179,27 +165,34 @@ def perform_stats_color_plot(data_path, fig_dim, grp_colors):
 ## main script
 if __name__=="__main__":
 
+    ## load csv
+    df = pd.read_csv(Path(pth_dir, f"glm_hmm_analysis.csv")) #f"glm_hmm_analysis.csv"))
+    mouse_names = df["mouse_name"].tolist() 
+
+    ## analysis of mice with glm-hmm data
     #[per_mouse_analysis(subject_name) for subject_name in mouse_names]
+    
+    ## update csv with wiggler groups
+    #wiggler_groups = sort_mice(mouse_names, pth_dir)
+    #df["wiggler_group"] = wiggler_groups
+    #df.to_csv(Path(pth_dir, f"glm_hmm_analysis.csv")) #f"glm_hmm_analysis.csv"))
+   
+    ## update csv with glm-hmm states
     #update_csv_glm_hmm_engagement(pth_dir)
 
-    #compute_pearsonr_across_mice(mouse_names, pth_dir)
-    #sort_mice(mouse_names, pth_dir)
-
-"""
+    ## wiggler group analysis
     grp_colors = ["#F8766D", "#00BA38", "#619CFF"]
     grp_wiggle = ["good", "neutral", "bad"]
 
     for i in range(len(grp_wiggle)):
         group = grp_wiggle[i] 
-        plot_glm_hmm_engagement(group, pth_dir, grp_colors[i])
+        #plot_glm_hmm_engagement(group, pth_dir, grp_colors[i])
         wigglers = np.load(Path(pth_dir, f"{group}_wigglers.npy"))
         plot_K_feedbackType_group(wigglers, pth_dir, f"{group}_wigglers")
-        total_data, std_data, raw_total_data = save_group_color_plot(wigglers, pth_dir, "avg_prop_wiggle", f"{group}_wigglers", (3,4), (0,3))
-        data_85, std_85, raw_data_85 = save_group_color_plot(wigglers, pth_dir, "avg_prop_wiggle_85", f"{group}_85_wigglers", (3,4), (0,3))
-        data = [total_data, std_data, data_85, std_85, raw_total_data, raw_data_85]
-        with open(Path(pth_dir).joinpath("results", f"{group}.wigglers"), "wb") as f:
-            pickle.dump(data, f)
-            print(f"{group} wigglers data pickled")
+        #total_data, std_data, raw_total_data = save_group_color_plot(wigglers, pth_dir, "avg_prop_wiggle", f"{group}_wigglers", (3,4), (0,3))
+        #data = [total_data, std_data, raw_total_data]
+        #with open(Path(pth_dir).joinpath("results", f"{group}.wigglers"), "wb") as f:
+            #pickle.dump(data, f)
+            #print(f"{group} wigglers data pickled")
 
-    perform_stats_color_plot(pth_dir, (8,8), grp_colors)
-"""
+    #perform_stats_color_plot(pth_dir, (8,8), grp_colors)

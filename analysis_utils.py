@@ -8,6 +8,41 @@ import pandas as pd
 import pickle
 from scipy.stats import pearsonr
 
+def classify_mouse_wiggler(subject_name, data_path):
+    """Classify mice as good, neutral, or bad wiggler
+
+    Args:
+        subject_name (str): mouse name
+        data_path (str): path to data files
+
+    Returns:
+        mouse_wiggler_group (str): classification of the mouse as "good wiggler", "neutral wiggler", or "bad wiggler"
+
+    """
+
+    k = np.arange(0,5,1)
+    ## read pickle file
+    pth_data = Path(data_path).joinpath(f"results/{subject_name}.k_groups_feedbackType")
+    with open (pth_data, "rb") as f:
+        x = pickle.load(f)
+        ## low contrast data
+        non_wiggle = x[6:8] ## k = [0,1]
+        wiggle = x[8:11] ## k = [2,3,4]
+        res = pearsonr(k, np.nan_to_num(x[6:11])) 
+        s = pd.Series([np.mean(non_wiggle), np.mean(wiggle)])
+        if s.is_monotonic_increasing==True and res.statistic >=0.5:
+            mouse_wiggler_group = "good"
+        else:
+            if res.statistic <= -0.5:
+                mouse_wiggler_group = "bad"
+            else:
+                mouse_wiggler_group = "neutral"
+    
+    print(f"{subject_name}: {mouse_wiggler_group}")
+
+    return mouse_wiggler_group
+
+
 def convert_wheel_deg_to_visual_deg(subject_name, data_path):
     """Convert speed analysis done in wheel degrees to visual degrees
 
@@ -28,10 +63,10 @@ def convert_wheel_deg_to_visual_deg(subject_name, data_path):
             K = df_eid["n_extrema"].values
            
             ## compute visual speed
-            visual_speed = [(wheel_speed[i] / (K[i]+0.000001 / 2)) * wheel_conversion_factor for i in range(len(K))]
+            visual_speed = [wheel_speed[i] * wheel_conversion_factor if K[i] != 0 else 0 for i in range(len(K))]
 
             ## store data
-            df_eid["visual_speed"] = visual_speed
+            df_eid["visual_speed"] = np.nan_to_num(visual_speed, posinf=0, neginf=0) ## remove infs
             df_eid.to_csv(file_path, index=False)
 
         except FileNotFoundError:
@@ -57,6 +92,7 @@ def compute_wiggle_var_by_grp(subject_name, eids, contrast_value, yname, data_pa
     """
 
     group_data = [[] for _ in range(5)] ## initialize lists for groups k = 0 to 4
+    n_trials = [[] for _ in range(5)] ## initialize lists for groups k = 0 to 4
     trial_counts = [] ## initialize list for trial counts
 
     for eid in eids:
@@ -72,12 +108,13 @@ def compute_wiggle_var_by_grp(subject_name, eids, contrast_value, yname, data_pa
         trial_counts.append(len(df_data)) 
 
         for k in range(5):
-            df_k = df_data.query(f"n_extrema == {k} and duration <= 1") ## to query trials by #extrema and duration [sec] 
+            df_k = df_data.query(f"n_extrema == {k} and duration <=1") ## to query trials by #extrema and duration [sec] 
             if len(df_k) >= 1: ## minimum of one trial
                 group_mean = df_k[yname].mean()
                 group_data[k].append(group_mean)
+                n_trials[k].append(len(df_k))
 
-    return tuple(group_data), trial_counts
+    return tuple(group_data), trial_counts, n_trials
 
 
 def load_data(subject_name, data_path):
@@ -123,32 +160,9 @@ def save_average_data(subject_name, data_n_extrema_mouse, accu_mouse, data_path)
     avg_data = pd.DataFrame(data_n_extrema_mouse).mean()
     np.save(Path(data_path).joinpath(f"{subject_name}/{subject_name}_avg_prop_wiggle.npy"), avg_data.values.tolist())
 
-    ## obtain >85% performance sessions
-    perf_85 = np.where(np.array(accu_mouse) >= 0.85)[0] ## indices of sessions
-    data_85 = [data_n_extrema_mouse[i] for i in perf_85]
-    avg_mouse_data_85 = pd.DataFrame(data_85).mean()
-    np.save(Path(data_path).joinpath(f"{subject_name}/{subject_name}_avg_prop_wiggle_85.npy"), avg_mouse_data_85.values.tolist())
-
-
-def compute_pearsonr_wheel_accu(subject_name, data_path):
-    """Compute Pearson r correlation coefficient between # of wheel direction changes vs proportion correct
-
-    Args:
-        subject_name (str): mouse name
-
-    """
-    k = np.arange(0,5,1)
-    ## read pickle file
-    pth_data = Path(data_path).joinpath(f"results/{subject_name}.k_groups_feedbackType")
-    with open (pth_data, "rb") as f:
-        x = pickle.load(f)
-        data = x[6:11] ## indices of low contrast data
-        r = pearsonr(k, data).statistic
-
-    return r
 
 def compute_glm_hmm_engagement(subject_name, data_path):
-    """Compute P(engagement) based on manual annotation of 3-state GLM-HMM model
+    """Update csv files with manual annotation of 3-state GLM-HMM model
     Args:
         subject_name (str): mouse name
         data_path (str): data path to store files
@@ -158,82 +172,104 @@ def compute_glm_hmm_engagement(subject_name, data_path):
     idx = glm_hmm_df.index[glm_hmm_df["mouse_name"] == f"{subject_name}"][0]
     states = dict(glm_hmm_df.iloc[idx])
 
-    ## eids
     ## load glm-hmm eids
     eids = np.load(Path(data_path, subject_name, f"{subject_name}_eids_glm_hmm.npy"))
     print(f"{subject_name}: {len(eids)} glm-hmm eids")
-    eids_80 = []
 
-    ## compute P(engagement)
+    ## update glm-hmm csv
     for eid in eids:
         df_eid = pd.read_csv(Path(data_path, subject_name, eid, f"{eid}_glm_hmm.csv"))
         df_eid['state_binary'] = df_eid['state_glm_hmm_3'].map(states)
         ## save updated csv
-        df_eid.to_csv(Path(data_path, subject_name, eid, f"{eid}_glm_hmm.csv"))
-        ## identify sessions with >=85% accuracy
         df_eid["feedbackType"] = df_eid["feedbackType"].replace(-1,0)
-        session_accu = df_eid["feedbackType"].mean()
-        if session_accu >= 0.80:
-            eids_80.append(eid)
+        df_eid.to_csv(Path(data_path, subject_name, eid, f"{eid}_glm_hmm.csv"))
 
     ## concatenate all glm-hmm csvs
     csv_learn = []
-    [csv_learn.append(Path(data_path, subject_name, eid, f"{eid}_glm_hmm.csv")) for eid in eids_80]
+    [csv_learn.append(Path(data_path, subject_name, eid, f"{eid}_glm_hmm.csv")) for eid in eids]
 
     ## concatenate csvs
     df_csv_concat = pd.concat([pd.read_csv(file) for file in csv_learn], ignore_index=True)
-    df_csv_concat.to_csv(Path(data_path, subject_name, f"{subject_name}_glm_hmm_classification_80.csv"), index=False)
+    df_csv_concat.to_csv(Path(data_path, subject_name, f"{subject_name}_glm_hmm_classification.csv"), index=False)
     print(f"csv saved for {subject_name}: {len(eids)} sessions")
 
+def load_mouse_wiggle_data(subject_name, data_path):
+    """Load mouse wiggle data 
+
+    Args:
+        subject_name (str): mouse name
+        data_path (str): data path to store files
+    """
+
+    try:
+        df_mouse = pd.read_csv(Path(data_path, subject_name, f"{subject_name}_glm_hmm_classification.csv"))
+        wiggle = df_mouse.query("abs(goCueRT-stimOnRT) <=0.05 and n_extrema >=2 and duration <=1")
+        return wiggle
+    except Exception as e:
+        print(f"{subject_name} has no sessions")
+        return None
+
+def compute_wiggle_statistics(wiggle):
+    """Compute mouse wiggle statistics
+
+    Args:
+        wiggle (df): dataframe of mouse wiggle data
+    """
+
+    stats = {}
+    wiggle["feedbackType"] = wiggle["feedbackType"].replace(-1,0)
+    stats["mean_K"] = wiggle["n_extrema"].mean()
+    stats["median_K"] = wiggle["n_extrema"].median()
+
+    total_trials = len(wiggle)
+
+    for state in ["engaged", "biased", "disengaged"]:
+        state_wiggle = wiggle.query(f"state_binary == '{state}'")
+        state_wiggle_early = state_wiggle.query("goCueRT <=0.08 and goCueRT >=-0.2")
+        state_wiggle_normal = state_wiggle.query("goCueRT >0.08 and goCueRT <1.2")
+
+        ## proportion state
+        stats[f"P{state}"] = len(state_wiggle) / total_trials if total_trials > 0 else 0 
+        stats[f"P{state}_early"] = len(state_wiggle_early) / total_trials if total_trials > 0 else 0
+        stats[f"P{state}_normal"] = len(state_wiggle_normal) / total_trials if total_trials > 0 else 0
+
+        ## proportion correct
+        stats[f"P{state}_corr"] = state_wiggle["feedbackType"].mean()
+        stats[f"P{state}_early_corr"] = state_wiggle_early["feedbackType"].mean()
+        stats[f"P{state}_normal_corr"] = state_wiggle_normal["feedbackType"].mean()
+
+    return stats
+
 def update_csv_glm_hmm_engagement(data_path):
-    """Update glm_hmm_classification csv with num_engaged and num_disengaged for wiggles
+    """Update glm_hmm_classification csv with mouse wiggle statistics
 
     Args:
         data_path (str): data path to store files
 
     """
-    df = pd.read_csv(Path(data_path, "glm_hmm_analysis.csv"))
-    
-    ## initialize
-    num_engaged = []; num_disengaged = []; num_biased = []
-    mean_K = []; median_K = []; 
-    Pengaged = []; Pbiased = []; Pdisengaged = [] 
 
-    ## compute #engaged, #disengaged, # biased wiggles
-    for subject_name in df["mouse_name"]:
-        try:
-            df_mouse = pd.read_csv(Path(data_path, subject_name, f"{subject_name}_glm_hmm_classification_80.csv"))
-            wiggle = df_mouse.query("n_extrema >=2 and duration <=1")
+    df = pd.read_csv(Path(data_path, "glm_hmm_analysis.csv"), index_col=0)
+    print(df)
+    mouse_names = df["mouse_name"].tolist()
 
-            ## compute statistics
-            mean_K_mouse = wiggle["n_extrema"].mean()
-            median_K_mouse = wiggle["n_extrema"].median()
+    ## list to hold results for each subject
+    results = []
 
-            ## split by state
-            engage_wiggle = wiggle.query("state_binary == 'engaged'")
-            disengage_wiggle = wiggle.query("state_binary == 'disengaged'")
-            bias_wiggle = wiggle.query("state_binary == 'biased'")
+    for subject_name in mouse_names:
+        wiggle = load_mouse_wiggle_data(subject_name, data_path)
+        stats = compute_wiggle_statistics(wiggle)
+        results.append(stats)
 
-            ## compute Pengaged
-            total_trials = len(engage_wiggle) + len(disengage_wiggle) + len(bias_wiggle)
-            Pengaged_mouse = len(engage_wiggle) / total_trials
-            Pbiased_mouse = len(bias_wiggle) / total_trials
-            Pdisengaged_mouse = len(disengage_wiggle) / total_trials
+    ## convert results to a DataFrame
+    results_df = pd.DataFrame(results)
+    results_df["mouse_name"] = mouse_names
 
-            ## save results
-            num_engaged.append(len(engage_wiggle)); num_disengaged.append(len(disengage_wiggle)); num_biased.append(len(bias_wiggle))
-            mean_K.append(mean_K_mouse); median_K.append(median_K_mouse); Pengaged.append(Pengaged_mouse); Pbiased.append(Pbiased_mouse); Pdisengaged.append(Pdisengaged_mouse)
+    ## concatenate new results with the original DataFrame
+    updated_df = df.merge(results_df, how="right", on="mouse_name")
+    print(updated_df)
 
-        except Exception as e:
-            print(f"{subject_name} has no sesions")
-            num_engaged.append([]); num_disengaged.append([]); num_biased.append([])
-            mean_K.append([]); median_K.append([]); Pengaged.append([]); Pbiased.append([]); Pdisengaged.append([])
-
-    df["num_engaged_wiggles"] = num_engaged; df["num_disengaged_wiggles"] = num_disengaged; df["num_biased_wiggles"] = num_biased
-    df["mean_K"] = mean_K; df["median_K"] = median_K; df["Pengaged"] = Pengaged; df["Pbiased"] = Pbiased; df["Pdisengaged"] = Pdisengaged
-
-    ## save csv
-    df.to_csv(Path(data_path, f"glm_hmm_analysis.csv"), index=False)
+    ## save updated DataFrame to csv
+    updated_df.to_csv(Path(data_path, "glm_hmm_analysis.csv"), index=False)
     print("glm-hmm analysis updated")
 
 

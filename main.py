@@ -10,8 +10,10 @@ import pickle
 import seaborn as sns
 from pathlib import Path
 
-one = ONE(base_url='https://openalyx.internationalbrainlab.org',
-          password='international', silent=True)
+#one = ONE(base_url='https://openalyx.internationalbrainlab.org',
+          #password='international', silent=True)
+
+one = ONE()
 
 ## per mouse analysis
 
@@ -50,19 +52,35 @@ def build_k_groups_per_mouse(subject_name, yname, ystr, data_path):
     data = [] # initialize data
 
     ## plot labels
-    x_labels = ["k = 0", "k = 1", "k = 2", "k = 3", "k >= 4"]
-    xstr  = "# of wheel direction changes"
+    x_labels = ["0", "1", "2", "3", "4"]
+    xstr  = "#changes in wheel direction"
 
     for i in range(len(contrasts)):
         contrast = contrasts[i]
-        results, n_trials = compute_wiggle_var_by_grp(subject_name, eids, contrast, yname, data_path)
+        results, n_trials, n_trials_K = compute_wiggle_var_by_grp(subject_name, eids, contrast, yname, data_path)
+        
         data.extend([np.median(result) for result in results])
         data.append(int(np.median(n_trials))) ## integer necessary for weighing DataFrame
 
         plot_four_boxplot_grps(n_trials, results, x_labels, subject_name, xstr, ystr, yname, Path(data_path, f"{contrast_labels[i]}_contrast_{yname}"), "Wilcoxon", figure_size=(10,8))
 
+        ## build legend
+        m1_mouse  =  [np.nanmean(results[i]) for i in range(len(results))]
+        st1_mouse = [np.nanstd(results[i]) for i in range(len(results))]
+        cts_mouse = [np.nansum(n_trials_K[i]) for i in range(len(results))]
+
+        build_legend(m1_mouse, st1_mouse, cts_mouse)
+
+        ## save plot
+        save_plot(Path(data_path, f"{contrast_labels[i]}_contrast_{yname}"), f"{subject_name}_{yname}.png")
+        
+        ## save trial counts
+        np.save(Path(data_path, f"{subject_name}", f"{subject_name}_n_trials_K_{contrast_labels[i]}.npy"), n_trials_K)
+
+    ## save data
     with open(Path(data_path, "results", f"{subject_name}.k_groups_{yname}"), "wb") as f:
         pickle.dump(data, f)
+
 
 def compute_across_mice(mouse_names, yname, ystr, data_path):
     """Process multiple mice
@@ -84,13 +102,27 @@ def compute_across_mice(mouse_names, yname, ystr, data_path):
             for i, val in enumerate(data):
                 bwm_data[i].append(val)
     
-    # Plotting for high, low, and zero contrast across all mice
-    contrast_labels = ['high', 'low', 'zero']
+    ## plotting for high, low, and zero contrast across all mice
+    contrast_labels = ["high", "low", "zero"] 
     idx = np.arange(0,18,6)
 
     for i in range(len(contrast_labels)):
         start = idx[i]
-        plot_four_boxplot_grps(bwm_data[start:start+6][-1], bwm_data[start:start+6], ["k = 0", "k = 1", "k = 2", "k = 3", "k >= 4"], f"N = {len(mouse_names)} mice", "# of wheel direction changes", ystr, yname, Path(data_path, f"{contrast_labels[i]}_contrast_{yname}"), "Mann-Whitney", figure_size=(10,8))
+        plot_four_boxplot_grps(bwm_data[start:start+6][-1], bwm_data[start:start+6], ["0", "1", "2", "3", "4"], f"N = {len(mouse_names)} mice", "#changes in wheel direction", ystr, yname, Path(data_path, f"{contrast_labels[i]}_contrast_{yname}"), "Wilcoxon", figure_size=(10,8))
+
+        ## compute summary stats
+        m1_final  = np.nanmean(bwm_data[start:start+6], axis=1)
+        st1_final = np.nanstd(bwm_data[start:start+6], axis=1)
+
+        ## compute trial counts
+        _, _, cts_final = compute_n_trials_per_K(pth_dir, contrast_labels[i])
+        
+        ## build legend
+        build_legend(m1_final, st1_final, cts_final)
+       
+        ## save plot
+        save_plot(Path(data_path, f"{contrast_labels[i]}_contrast_{yname}"), f"N = {len(mouse_names)} mice_{yname}.png")
+
 
 if __name__=="__main__":
 
@@ -102,11 +134,9 @@ if __name__=="__main__":
 
     ## pre-process per mouse
     #[preprocess_per_mouse(subject_name, pth_dir) for subject_name in mouse_names]
+    #[convert_wheel_deg_to_visual_deg(subject_name, pth_dir) for subject_name in mouse_names]
 
     ## build plots
-    for yname, ystr in [("visual_speed", "visual speed [visual deg/sec]")]: #[("feedbackType", "proportion correct"),
-                         #[("rms", "RMS [deg/sec]"),
-                         #[("visual_speed", "visual speed [visual deg/sec]")]:
-
-        [build_k_groups_per_mouse(subject_name, yname, ystr, pth_dir) for subject_name in mouse_names] ## plot per mouse
+    for yname, ystr in [("feedbackType", "proportion correct")]: #[("feedbackType", "proportion correct"), ("rms", "RMS [deg/sec]"), ("visual_speed", "visual speed [visual deg/sec]")]:
+        #[build_k_groups_per_mouse(subject_name, yname, ystr, pth_dir) for subject_name in mouse_names] ## plot per mouse
         compute_across_mice(mouse_names, yname, ystr, pth_dir) ## plot across mice
