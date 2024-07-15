@@ -11,12 +11,10 @@ from scipy.stats import pearsonr
 def classify_mouse_wiggler(subject_name, data_path):
     """Classify mice as good, neutral, or bad wiggler
 
-    Args:
-        subject_name (str): mouse name
-        data_path (str): path to data files
+    :param subject_name (str): mouse name
+    :param data_path (str): path to data files
 
-    Returns:
-        mouse_wiggler_group (str): classification of the mouse as "good wiggler", "neutral wiggler", or "bad wiggler"
+    :return mouse_wiggler_group (str): classification of the mouse as "good wiggler", "neutral wiggler", or "bad wiggler"
 
     """
 
@@ -46,9 +44,8 @@ def classify_mouse_wiggler(subject_name, data_path):
 def convert_wheel_deg_to_visual_deg(subject_name, data_path):
     """Convert speed analysis done in wheel degrees to visual degrees
 
-    Args:
-        subject_name (str): mouse name
-        data_path (str): path to data files
+    :param subject_name (str): mouse name
+    :param data_path (str): path to data files
         
     """
 
@@ -80,14 +77,12 @@ def compute_wiggle_var_by_grp(subject_name, eids, contrast_value, yname, data_pa
 
     Compute data per group by k and trial counts for N = 1 mouse.
 
-    Args:
-        subject_name (str): mouse name
-        eids (list): sessions
-        contrast_value (float): contrast value [±1, ±0.25, ±0.125, ±0.0625, 0]
-        data_path (str): path to data files
+    :param subject_name (str): mouse name
+    :param eids (list): sessions
+    :param contrast_value (float): contrast value [±1, ±0.25, ±0.125, ±0.0625, 0]
+    :param data_path (str): path to data files
 
-    Returns:
-        Data for groups k = 0, 1, 2, 3, 4, and trial counts (tuple of lists)
+    :return data for groups k = 0, 1, 2, 3, 4, and trial counts (tuple of lists)
 
     """
 
@@ -120,13 +115,11 @@ def compute_wiggle_var_by_grp(subject_name, eids, contrast_value, yname, data_pa
 def load_data(subject_name, data_path):
     """Load data for a given subject
     
-    Args:
-        subject_name (str): mouse name
-        data_path (str): data path to store files
+    :param subject_name (str): mouse name
+    :param data_path (str): data path to store files
     
-    Returns:
-        data_n_extrema_mouse (list): sessions x stimulus contrast data on mean # of changes in wheel direction
-        accu_mouse (list): accuracies across sessions
+    :return data_n_extrema_mouse (list): sessions x stimulus contrast data on mean # of changes in wheel direction
+    :return accu_mouse (list): accuracies across sessions
 
     """
 
@@ -150,11 +143,10 @@ def load_data(subject_name, data_path):
 def save_average_data(subject_name, data_n_extrema_mouse, accu_mouse, data_path):
     """Save average data for a given subject as npy file
 
-    Args:
-        subject_name (str): mouse name
-        data_n_extrema_mouse (list): sessions x stimulus contrast data on mean # of changes in wheel direction
-        accu_mouse (list): accuracies across sessions
-        data_path (str): data path to store files
+    :param subject_name (str): mouse name
+    :param data_n_extrema_mouse (list): sessions x stimulus contrast data on mean # of changes in wheel direction
+    :param accu_mouse (list): accuracies across sessions
+    :param data_path (str): data path to store files
 
     """
     avg_data = pd.DataFrame(data_n_extrema_mouse).mean()
@@ -163,9 +155,9 @@ def save_average_data(subject_name, data_n_extrema_mouse, accu_mouse, data_path)
 
 def compute_glm_hmm_engagement(subject_name, data_path):
     """Update csv files with manual annotation of 3-state GLM-HMM model
-    Args:
-        subject_name (str): mouse name
-        data_path (str): data path to store files
+
+    :param subject_name (str): mouse name
+    :param data_path (str): data path to store files
 
     """
     glm_hmm_df = pd.read_csv(Path(data_path).joinpath("glm_hmm_analysis.csv")) ## manual annotation csv
@@ -212,8 +204,8 @@ def load_mouse_wiggle_data(subject_name, data_path):
 def compute_wiggle_statistics(wiggle):
     """Compute mouse wiggle statistics
 
-    Args:
-        wiggle (df): dataframe of mouse wiggle data
+    :param wiggle (df): dataframe of mouse wiggle data
+
     """
 
     stats = {}
@@ -243,8 +235,7 @@ def compute_wiggle_statistics(wiggle):
 def update_csv_glm_hmm_engagement(data_path):
     """Update glm_hmm_classification csv with mouse wiggle statistics
 
-    Args:
-        data_path (str): data path to store files
+    :param data_path (str): data path to store files
 
     """
 

@@ -17,6 +17,74 @@ one = ONE()
 ## pretty up plots
 plt.rc('font',family='Arial')
 
+class TrialData():
+    def __init__(trials, eid):
+        trial_data = one.load_object(eid, 'trials')
+        trials.goCue_times = trial_data.goCue_times
+        trials.stimOn_times = trial_data.stimOn_times
+        trials.feedback_times = trial_data.feedback_times
+        trials.response_times = trial_data.response_times
+        trials.contrastRight = trial_data.contrastRight
+        trials.contrastLeft = trial_data.contrastLeft
+        trials.choice = trial_data.choice
+        trials.probabilityLeft = trial_data.probabilityLeft
+        trials.feedbackType = trial_data.feedbackType
+        trials.intervals = trial_data.intervals
+        trials.rewardVolume = trial_data.rewardVolume
+
+        trials.total_trial_count = len(trials.goCue_times)
+        #supplementing the effective feedback time
+        for tridx in range( len(trials.feedback_times) ):
+            if isnan(trials.feedback_times[tridx]):
+                trials.feedback_times[tridx] = trials.stimOn_times[tridx] + 60.0
+
+        ## build contrast array
+        n_trials = trials.total_trial_count
+
+        trials.contrast = np.empty(n_trials)
+        contrastRight_idx = np.where(~np.isnan(trials.contrastRight))[0]
+        contrastLeft_idx = np.where(~np.isnan(trials.contrastLeft))[0]
+
+        trials.contrast[contrastRight_idx] = trials.contrastRight[contrastRight_idx]
+        trials.contrast[contrastLeft_idx] = -1 * trials.contrastLeft[contrastLeft_idx]
+
+    def psychometric_curve(trials, wheel_directions, reaction_times, false_start_threshold):
+        total_trial_count = trials.total_trial_count
+        trials.performance = np.zeros((2,4,2*ctlen)) #[early/late response, left/right block, contrast]
+        trials.fraction_choice_right = np.zeros((2,4,2*ctlen))
+        trials.performance_cnts = np.zeros((2,4,2*ctlen))
+        durations = trials.feedback_times - trials.stimOn_times
+        sync = abs(trials.goCue_times - trials.stimOn_times)
+
+        for tridx in range(total_trial_count):
+            if trials.probabilityLeft[tridx] != 0.5: # biased block
+                FStrial = 1 if reaction_times[tridx] < false_start_threshold and sync[tridx] < 0.03 else 0
+                Rblock = 1 if trials.probabilityLeft[tridx] < 0.5 else 0
+                Rtrial = 1 if isnan(trials.contrastLeft[tridx]) else 0
+            else: # unbiased block
+                FStrial = 1 if reaction_times[tridx] < false_start_threshold and sync[tridx] < 0.03 else 0
+                Rblock = 2 if trials.probabilityLeft[tridx] == 0.5 else 3
+                Rtrial = 1 if isnan(trials.contrastLeft[tridx]) else 0
+
+            contrast_idx = 0
+            for cidx in range(ctlen):
+                if Rtrial == 1: # false starts
+                    if abs(trials.contrastRight[tridx] - contrastTypes[cidx]) < 0.001:
+                        contrast_idx = ctlen + cidx
+                else:
+                    if abs(trials.contrastLeft[tridx] - contrastTypes[cidx]) < 0.001:
+                        contrast_idx = ctlen-1 - cidx
+
+            #Behavioural psychometric
+            trials.fraction_choice_right[FStrial][Rblock][contrast_idx] += 0.5 - trials.choice[tridx]/2.0
+            trials.performance[FStrial][Rblock][contrast_idx] += 0.5 + trials.feedbackType[tridx]/2.0
+
+            #Wheel psychometric
+            #trials.fraction_choice_right[FStrial][Rblock][contrast_idx] += 0.5 + wheel_directions[tridx]/2.0
+            #trials.performance[FStrial][Rblock][contrast_idx] += 0.5 + 0.5*np.sign( (Rtrial - 0.5)*wheel_directions[tridx] )
+
+            trials.performance_cnts[FStrial][Rblock][contrast_idx] += 1.0
+
 
 class WheelData():
     def __init__(wheel, eid):
@@ -102,6 +170,7 @@ class WheelData():
 
 def compute_RTs(eid, trials):
     goCueRTs = []; stimOnRTs = []
+    trials = TrialData(eid)
     wheel = WheelData(eid)
     wheel.calc_trialwise_wheel(trials.stimOn_times, trials.feedback_times)
     wheel.calc_movement_onset_times(trials.stimOn_times)

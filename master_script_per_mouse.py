@@ -21,8 +21,7 @@ from plotting.plot_analysis_per_mouse import *
 def per_mouse_analysis(subject_name):
     """Preprocess one mouse
 
-    Args:
-        subject_name (str): mouse name
+    :param subject_name (str): mouse name
 
     """
 

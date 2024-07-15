@@ -11,12 +11,10 @@ def curate_eids_mouse(subject_name, data_path):
 
     Curates sessions for N = 1 mouse.
 
-    Args:
-        subject_name (str): mouse name
-        data_path (str): path to data files
+    :param subject_name (str): mouse name
+    :param data_path (str): path to data files
 
-    Returns:
-        eids_final (list): sessions with valid wheel data
+    :return eids_final (list): sessions with valid wheel data
 
     """
 
@@ -45,12 +43,10 @@ def curate_eids_neural(reg, data_path):
 
     Curates sessions for < 80 microns maximum drift.
 
-    Args:   
-        reg (str): brain region
-        data_path (str): path to data files
+    :param reg (str): brain region
+    :param data_path (str): path to data files
 
-    Returns:
-        eids_final (list): sessions with valid neural data
+    :return eids_final (list): sessions with valid neural data
 
     """
     eids, probes = sessions_with_region(reg, one=one)

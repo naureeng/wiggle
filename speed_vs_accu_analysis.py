@@ -22,12 +22,10 @@ from plotting.plot_analysis_per_mouse import *
 def compute_K_data(subject_name, data_path):
     """Compute speed vs accuracy correlation coefficient for fixed K in each mouse
 
-    Args:
-        subject_name (str): mouse name
-        data_path (str): path to store data files
+    :param subject_name (str): mouse name
+    :param data_path (str): path to store data files
 
-    Returns:
-        data (list): speed vs accuracy correlation coefficient in K = [2,3,4] for one mouse
+    :return data (list): speed vs accuracy correlation coefficient in K = [2,3,4] for one mouse
 
     """
     data = []
@@ -48,11 +46,9 @@ def compute_K_data(subject_name, data_path):
 def obtain_bwm_K_data(data_path):
     """Obtain speed vs accuracy correlation coefficients across all mice
 
-    Args:
-        data_path (str): path to store data files
+    :param data_path (str): path to store data files
     
-    Returns:
-        bwm_data (list of lists): speed vs accuracy correlation coefficient in K = [2,3,4] across multiple mice
+    :return bwm_data (list of lists): speed vs accuracy correlation coefficient in K = [2,3,4] across multiple mice
 
     """
 
@@ -73,8 +69,7 @@ def obtain_bwm_K_data(data_path):
 def boxplot_bwm_K_data(data_path):
     """Boxplot of speed vs accuracy correlation coefficients across all mice for fixed K
 
-    Args:
-        data_path (str): path to store data files
+    :param data_path (str): path to store data files
 
     """
 

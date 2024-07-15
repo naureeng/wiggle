@@ -28,9 +28,8 @@ def sort_mice(mouse_names, data_path):
     """Sort mice based on proportion correct vs # of wheel direction changes per mouse
     The classifications are good, neutral, and bad wigglers.
     
-    Args:
-        mouse_names (list): list of strings of mouse names
-        data_path (str): data path to store files
+    :param mouse_names (list): list of strings of mouse names
+    :param data_path (str): data path to store files
 
     """
 
@@ -56,10 +55,9 @@ def sort_mice(mouse_names, data_path):
 def plot_K_feedbackType_group(mouse_names, data_path, img_name):
     """Plot # of wheel direction changes vs proportion correct in group of mice
 
-    Args:
-        mouse_names (list): list of strings of mouse names
-        data_path (str): data path to store files
-        img_name (str): file name to add to data_path
+    :param mouse_names (list): list of strings of mouse names
+    :param data_path (str): data path to store files
+    :param img_name (str): file name to add to data_path
 
     """
 
@@ -84,12 +82,11 @@ def plot_K_feedbackType_group(mouse_names, data_path, img_name):
 def save_group_color_plot(mouse_names, data_path, file_name, group_name, fig_dim, color_map_lim):
     """Plot scaled color plot in group of mice
 
-    Args:
-        mouse_names (list): list of strings of mouse names
-        data_path (str): data path to store files
-        group_name (str): file name to add to data_path
-        fig_dim (arr): (width, height) of figure
-        color_map_lim (list): [lower bound, upper bound] of color_map
+    :param mouse_names (list): list of strings of mouse names
+    :param data_path (str): data path to store files
+    :param group_name (str): file name to add to data_path
+    :param fig_dim (arr): (width, height) of figure
+    :param color_map_lim (list): [lower bound, upper bound] of color_map
 
     """
 
@@ -111,10 +108,9 @@ def save_group_color_plot(mouse_names, data_path, file_name, group_name, fig_dim
 def perform_stats_color_plot(data_path, fig_dim, grp_colors):
     """Perform statistical analysis on color-scaled plot analysis across groups
 
-    Args:
-        data_path (str): data path to store files
-        fig_dim (arr): (width, height) of figure
-        grp_colors (list of str): hex code color palette for wiggle groups
+    :param data_path (str): data path to store files
+    :param fig_dim (arr): (width, height) of figure
+    :param grp_colors (list of str): hex code color palette for wiggle groups
 
     """
 

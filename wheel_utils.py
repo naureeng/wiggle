@@ -12,6 +12,9 @@ import seaborn as sns
 import pickle
 import matplotlib.pyplot as plt
 from itertools import chain 
+from plot_utils import set_figure_style
+import seaborn as sns
+from matplotlib.ticker import MaxNLocator
 
 def find_nearest(array, value):
     """Obtains nearest value in array
@@ -19,12 +22,10 @@ def find_nearest(array, value):
     Computes the index where a value occurs in array
     author: michael schartner
 
-    Args:
-        array (np.array): multiple values
-        value (int): search input
+    :param array (arr): multiple values
+    :param value (int): search input
 
-    Returns:
-        idx (int): index in array where value occurs
+    :return idx (int): index in array where value occurs
 
     """
 
@@ -40,13 +41,11 @@ def compute_n_extrema(t_eid, p_eid, n_trials):
     
     Computes #extrema for N = 1 session, 1 mouse
 
-    Args:
-        t_eid (list): wheel time data [sec]
-        p_eid (list): wheel position data [deg]
-        n_trials (np.array): #trials
+    :param t_eid (list): wheel time data [sec]
+    :param p_eid (list): wheel position data [deg]
+    :param n_trials (arr): #trials
 
-    Returns:
-        n_extrema (list): #extrema
+    :return n_extrema (list): #extrema
 
     """
 
@@ -64,15 +63,13 @@ def compute_rms(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trial
 
     Computes root mean square speed for N = 1 session, 1 mouse
     
-    Args:
-        t_eid (list): wheel time data [sec]
-        p_eid (list): wheel position data [deg]
-        motionOnset_eid_idx (int): motionOnset index
-        responseTime_eid_idx (int): responseTime index
-        n_trials (np.array): #trials
+    :param t_eid (list): wheel time data [sec]
+    :param p_eid (list): wheel position data [deg]
+    :param motionOnset_eid_idx (int): motionOnset index
+    :param responseTime_eid_idx (int): responseTime index
+    :param n_trials (np.array): #trials
 
-    Returns:
-        rms_eid (list): root mean square speed [deg/sec]
+    :return rms_eid (list): root mean square speed [deg/sec]
 
     """
 
@@ -108,29 +105,27 @@ def compute_rms(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trial
             slope = np.abs(stop_theta - start_theta)/(stop_time - start_time) ## compute slope magnitude in 0.05 sec bin
             slope_trial_bin.append(slope**2) ## compute squared slope magnitude
 
-        rms = np.sqrt(sum(slope_trial_bin) / n_bins) ## normalize by #bins and take square root (units: [deg/sec]) 
+        rms = np.sqrt(sum(slope_trial_bin) / n_bins) if n_bins !=0 else 0 ## normalize by #bins and take square root (units: [deg/sec]) 
         rms_eid.append(rms)
 
     return rms_eid
 
 
-def compute_speed(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trials, n_extrema):
+def compute_speed(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trials, n_extrema, data_path, subject_name, eid):
     """Obtains speed and performs ballistic classification
 
     Computes wheel speed and classifies ballistic movements for N = 1 session, 1 mouse
     Computes wiggle amplitudes (wheel degrees) based on # changes in wheel direction
     
-    Args:
-        t_eid (list): wheel time data [sec]
-        p_eid (list): wheel position data [deg]
-        motionOnset_eid_idx (int): motionOnset index
-        responseTime_eid_idx (int): responseTime index
-        n_trials (np.array): #trials
-        n_extrema (list): #extrema
+    :param t_eid (list): wheel time data [sec]
+    :param p_eid (list): wheel position data [deg]
+    :param motionOnset_eid_idx (int): motionOnset index
+    :param responseTime_eid_idx (int): responseTime index
+    :param n_trials (np.array): #trials
+    :param n_extrema (list): #extrema
 
-    Returns:
-        speed_eid (list): wheel speed [deg/sec]
-        ballistic_eid (Boolean list): 0==False [non-ballistic] and 1==True [ballistic]
+    :return speed_eid (list): wheel speed [deg/sec]
+    :return ballistic_eid (Boolean list): 0==False [non-ballistic] and 1==True [ballistic]
 
     """
 
@@ -138,6 +133,7 @@ def compute_speed(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_tri
     speed_eid = []
     ballistic_eid = []
     wiggle_amplitude = {"K = 2": [], "K = 3": [], "K = 4": []} ## initialize empty dict for wiggle amplitudes (wheel degrees)
+    wiggle_speed     = {"K = 2": [], "K = 3": [], "K = 4": []} ## initialize empty dict for wiggle speed (wheel degrees/sec)
 
     for i in range(n_trials):
 
@@ -212,29 +208,58 @@ def compute_speed(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_tri
 
             ## store wiggle amplitudes as dict
             k_key = f"K = {min(k_trial, 4)}"
-            #wiggle_amplitude[k_key].extend([p_idx[i] for i in idx])
-            wiggle_amplitude[k_key].extend([speed])
+            wiggle_amplitude[k_key].extend([p_idx[i] for i in idx])
+            wiggle_speed[k_key].append(speed)
 
         ## save data
         speed_eid.append(speed)
         ballistic_eid.append(ballistic)
 
     ## plot wiggle amplitudes
-    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+    fig, axs = plt.subplots(1, 3, figsize=(24,8))
+    set_figure_style(font_family="Arial", tick_label_size=24, axes_linewidth=2)
+    cstring = ["tab:green", "tab:red", "tab:purple"]
     axs = axs.ravel()  # Flatten the 2x2 array to make indexing easier
 
     for i, k in enumerate(range(2,5)):
         key = f"K = {k}"
         if key in wiggle_amplitude:
             myarray = wiggle_amplitude[key]
+            speed = wiggle_speed[key]
             weights = np.ones_like(myarray)/float(len(myarray))
-            axs[i].hist(myarray, bins=35, edgecolor='black')
-            axs[i].set_title(f'Histogram for {key}')
-            axs[i].set_xlabel('Speed')
-            axs[i].set_ylabel('Frequency')
 
-    plt.tight_layout()
-    plt.show()
+            # create the histogram
+            n, bins, patches = axs[i].hist(myarray, edgecolor='black', color=cstring[i], bins=np.arange(min(myarray), max(myarray) + 1, 1))
+
+            # set y-axis limit to the maximum count
+            max_count = np.max(n)
+            axs[i].set_ylim(0, np.ceil(max_count))
+
+            # set the y-axis to use integer ticks
+            axs[i].yaxis.set_major_locator(MaxNLocator(integer=True))
+            
+            # plot labels
+            axs[i].set_title(f'{key} (N = {len(speed)} trials)', fontsize=24, fontweight="bold")
+            axs[i].set_xlabel('wiggle amplitude [wheel deg]', fontsize=24)
+            axs[i].set_ylabel('counts', fontsize=24)
+            axs[i].set_xlim([-15,15])
+
+            # change all spines
+            for axis in ['top','bottom','left','right']:
+                axs[i].spines[axis].set_linewidth(2)
+
+            sns.despine(trim=False, offset=8)
+            plt.tight_layout()
+
+    plt.savefig(Path(data_path) / subject_name / f"{eid}/{eid}_wiggle_amplitude.png", dpi=300)
+    print("wiggle amplitude plot saved")
+
+    ## pickle wheel amplitude data
+    f = open(Path(data_path) / subject_name / f"{eid}/{eid}.wiggle_amplitude", 'wb')
+    data = [wiggle_amplitude]
+    pickle.dump(data, f)
+    f.close()
+    print("wheel data pickled")
 
     return speed_eid, ballistic_eid
 
@@ -242,11 +267,14 @@ def compute_speed(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_tri
 def get_extended_trial_windows(eid, time_lower, time_upper, movement_type):
     """
     GET_EXTENDED_TRIAL_WINDOWS creates dictionary for wheel movements in N = 1 session, 1 mouse 
+
     :param eid: session [string]
     :param time_lower: time prior motionOnset in [sec] [int]
     :param time_upper: time post motionOnset in [sec] [int]
+
     :return d: dictionary for wheel movements
     :return trial_issue: indices for excluded trials [list]
+    
     """
 
     trials = one.load_object(eid, 'trials')
@@ -291,12 +319,12 @@ def plot_ballistic_movement(subject_name, data_path):
     (de-bugging tool, will clean up)
 
     """ 
-    eids = np.load(Path(data_path) / subject_name / f"{subject_name}_eids_wheel_test.npy")
+    eids = np.load(Path(data_path) / subject_name / f"{subject_name}_eids_wheel.npy")
 
     for i in range(len(eids)):
         eid = eids[i]
         ## load csv
-        wh_csv  = pd.read_csv(Path(data_path) / subject_name / f"{eid}/{eid}_wheelData_test.csv")
+        wh_csv  = pd.read_csv(Path(data_path) / subject_name / f"{eid}/{eid}_wheelData.csv")
 
         ## load wheel data
         f = open( Path(data_path) / subject_name / f"{eid}/{eid}.wheel", 'rb')

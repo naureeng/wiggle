@@ -22,9 +22,8 @@ def preprocess_per_mouse(subject_name, data_path):
 
     Computes csv with  wheel Data "{eid}_wheelData.csv" for N = 1 mouse
 
-    Args:
-        subject_name (str): mouse name
-        data_path (str): path to data files 
+    :param subject_name (str): mouse name
+    :param data_path (str): path to data files 
 
     """
 
@@ -37,10 +36,9 @@ def build_k_groups_per_mouse(subject_name, yname, ystr, data_path):
 
     Outputs analysis and plot of groups by #extrema for N = 1 mouse 
 
-    Args:
-        subject_name (str): mouse name
-        yname (str): variable of interest
-        ystr (str): y-axis label for yname 
+    :param subject_name (str): mouse name
+    :param yname (str): variable of interest
+    :param ystr (str): y-axis label for yname 
 
     """
 
@@ -87,10 +85,9 @@ def compute_across_mice(mouse_names, yname, ystr, data_path):
 
     Outputs analysis and plot of groups by #extrema for N > 1 mouse
 
-    Args:
-        mouse_names (list): mouse names
-        yname (str): variable of interest
-        ystring (str): y-axis label for yname
+    :param mouse_names (list): mouse names
+    :param yname (str): variable of interest
+    :param ystring (str): y-axis label for yname
 
     """
 

@@ -13,12 +13,25 @@ from brainbox.processing import bincount2D
 from ibllib.atlas import AllenAtlas
 from scipy.ndimage import gaussian_filter
 from plot_utils import set_figure_style, build_legend
+from pathlib import Path
+from matplotlib.ticker import MaxNLocator
 
 ba = AllenAtlas()
 one = ONE()
 
 
 def sessions_with_region(acronym, one=None):
+    """
+    SESSIONS_WITH_REGION gets sessions containing brain region of interest
+    author: guido meijer
+
+    :param acronym: brain region of interest [str]
+
+    :return eids: sessions containing acronym [list of str]
+    :return probes: probes containing acronym [list of str] "probe0" or "probe1" for a given session
+
+    """
+
     if one is None:
         one = ONE()
     query_str = f'channels__brain_region__acronym__icontains,{acronym}' 
@@ -30,6 +43,15 @@ def sessions_with_region(acronym, one=None):
 
 
 def compute_maximum_drift(eid, probe):
+    """
+    COMPUTE_MAXIMUM_DRIFT gets maximum electrode drift for quality-control in N = 1 session
+
+    :param eid: session [str]
+    :param probe: "probe0" or "probe1" [str]
+
+    :return max_drift: maximum electrode drift in eid, probe pair [int]
+
+    """
 
     ## get dataset
     spikes = one.load_object(eid, 'spikes', collection=f'alf/{probe}')
@@ -46,11 +68,13 @@ def find_nearest(array, value):
     FIND_NEAREST obtains the index where a value occurs in array
     author: michael schartner
 
-    :param array: matrix [np.array]
+    :param array: matrix [np.arr]
     :param value: search input [int]
+
     :return idx: index in array where value occurs [int]
 
     """
+
     idx = np.searchsorted( array, value, side="left" )
     if idx > 0 and (idx == len(array) or math.fabs(value - array[idx-1]) < math.fabs(value - array[idx]) ):
         return idx - 1
@@ -60,15 +84,18 @@ def find_nearest(array, value):
 def pair_firing_rate_contrast(eid, probe, d, reg, time_lower, time_upper, T_BIN, alignment_type):
     """
     PAIR_FIRING_RATE_CONTRAST obtains the spike data for a session
+
     :param eid: session [string]
     :param probe: probe [string]
     :param time_lower: time prior motionOnset in [sec] [int]
     :param time_upper: time post motionOnset in [sec] [int]
     :param T_BIN: bin size [sec] [int]
     :param alignment_type: "motionOnset" or "stimOnset" [string]
+
     :return Res: 3D matrix of spike data [trials x time x units] [np.array]
     :return num_units: num of units [int]
     :return histology: ids of Res in histology [pd.dataframe]
+
     """
 
     #
@@ -143,6 +170,19 @@ def pair_firing_rate_contrast(eid, probe, d, reg, time_lower, time_upper, T_BIN,
 
 
 def obtain_psth(Res, time_lower, time_upper, T_BIN):
+    """
+    OBTAIN_PSTH gets trial-averaged spiking activity for each unit in N = 1 session
+
+    :param Res: 3D matrix of spike data [units x time x trials] [np.arr]
+    :param time_lower: time prior motionOnset in [sec] [int]
+    :param time_upper: time post motionOnset in [sec] [int]
+    :param T_BIN: bin size [sec] [int]
+
+    :return mu_data: trial-averaged mean spiking activity per unit [units x time] [np.arr]
+    :return std_data: trial-averaged std spiking activity per unit [units x time] [np.arr]
+    :return n_trials: #trials in N = 1 session [int]
+
+    """
 
     ## mean firing rate over trials per unit
     [n_units, n_bins, n_trials] = Res.shape
@@ -150,9 +190,25 @@ def obtain_psth(Res, time_lower, time_upper, T_BIN):
     mu_data = gaussian_filter(np.nanmean(mean_firing_unit, axis=0), sigma=3)
     std_data = gaussian_filter( (1.96*np.nanstd(mean_firing_unit, axis=0)) / np.sqrt(len(mean_firing_unit)), sigma=3)
 
-    return mu_data, std_data, n_trials, n_units
+    return mu_data, std_data, n_trials
 
-def plot_psth(mu_data_K, std_data_K, n_trials_K, time_lower, time_upper, T_BIN, n_units):
+
+def plot_psth(mu_data_K, std_data_K, n_trials_K, time_lower, time_upper, T_BIN, n_units, alignment_type, data_path, subject_name, eid):
+    """
+    PLOT_PSTH plots trial-averaged spiking activity for each unit in N = 1 session
+
+    :param mu_data_K:  trial_averaged mean spiking activity in trials sorted by #changes in wheel direction [units x time] [np.arr]
+    :param std_data_K: trial_averaged std spiking activity in trials sorted by #changes in wheel direction [units x time] [np.arr]
+    :param time_lower: time prior motionOnset in [sec] [int]
+    :param time_upper: time post motionOnset in [sec] [int]
+    :param T_BIN: bin size [sec] [int]
+    :param n_units: #units in N = 1 session [int]
+    :param alignment_type: "motionOnset" or "stimOnset" [str]
+    :param data_path: path to data files [str]
+    :param subject_name: region or mouse name [str]
+    :param eid: session name [str]
+
+    """
 
     cstring = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple"]
 
@@ -165,10 +221,17 @@ def plot_psth(mu_data_K, std_data_K, n_trials_K, time_lower, time_upper, T_BIN, 
     plt.ylim(bottom=0)
     
     ## labels
-    plt.xlabel("time aligned to motionOnset [sec]", fontsize=24)
+    plt.xlabel(f"time aligned to {alignment_type} [sec]", fontsize=24)
     plt.ylabel("mean firing rate [spikes/sec]", fontsize=24)
     plt.title(f"N = {n_units} mouse VISp units, 1 session", fontsize=24, fontweight="bold")
     plt.axvline(x=0, ls="--", lw=2, color="k")
+
+    # set y-axis limit to the maximum count
+    max_count = np.max([np.max(mu_data_K[i]) for i in range(len(cstring))])
+    plt.ylim(0, np.ceil(max_count))
+
+    # set the y-axis to use integer ticks
+    plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
 
     ## build legend
     m1 = [np.nanmean(mu_data_K[i]) for i in range(len(cstring))]
@@ -177,6 +240,7 @@ def plot_psth(mu_data_K, std_data_K, n_trials_K, time_lower, time_upper, T_BIN, 
 
     ## despine
     sns.despine(trim=False, offset=8)
-    plt.show()
+    plt.savefig(Path(data_path) / subject_name / f"{eid}/{eid}_psth_{alignment_type}.png", dpi=300)
+    print(f"psth aligned to {alignment_type} for [{time_lower},{time_upper}] sec saved")
 
 

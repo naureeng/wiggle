@@ -15,14 +15,12 @@ import pickle
 def compute_n_trials_per_K(data_path, contrast_label):
     """Compute mean #trials across mice, across sessions
 
-    Args:
-        data_path (str): data path to store files
-        contrast_label (str): "high", "low", "zero" to specify contrast group
+    :param data_path (str): data path to store files
+    :param contrast_label (str): "high", "low", "zero" to specify contrast group
 
-    Returns:
-        m1_final   (list): mean #trials for k = [0, 1, 2, 3, 4]
-        st1_final  (list): std #trials for k = [0, 1, 2, 3, 4]
-        cts_final  (list): total #trials for k = [0, 1, 2, 3, 4]
+    :return m1_final   (list): mean #trials for k = [0, 1, 2, 3, 4]
+    :return st1_final  (list): std #trials for k = [0, 1, 2, 3, 4]
+    :return cts_final  (list): total #trials for k = [0, 1, 2, 3, 4]
 
     """
 
@@ -63,7 +61,7 @@ def build_legend(m1, st1, cts):
         f"N = {int(cts[2]):,} ({round(m1[2],2)} ± {round(st1[2],2)})", 
         f"N = {int(cts[3]):,} ({round(m1[3],2)} ± {round(st1[3],2)})", 
         f"N = {int(cts[4]):,} ({round(m1[4],2)} ± {round(st1[4],2)})"],
-        frameon=False, fontsize=20, title="# trials", title_fontsize=20, bbox_to_anchor=(1,1))
+        frameon=False, fontsize=20, title="# trials", title_fontsize=20, bbox_to_anchor=(1.05,1))
 
     plt.tight_layout()
 
@@ -73,12 +71,10 @@ def reindex_df(df, repeat_col):
 
     Repeats rows in the DataFrame based on the values in the specified column
 
-    Args:
-        df (DataFrame): input DataFrame
-        repeat_col (str): DataFrame column containing the count of repetitions for each row 
+    :param df (DataFrame): input DataFrame
+    :param repeat_col (str): DataFrame column containing the count of repetitions for each row 
 
-    Returns:
-        expanded DataFrame with one row per count per sample
+    :return expanded DataFrame with one row per count per sample
 
     """
 
@@ -99,10 +95,9 @@ def set_figure_style(font_family="Arial", tick_label_size=24, axes_linewidth=2):
 
     Set default styling options for matplotlib figures.
 
-    Args:
-        font_family (str): font family for sans-serif font (default is "Arial")
-        tick_label_size (float): tick label sizes (default is 24)
-        axes_linewidth (float): axes linewidth (default is 2)
+    :param font_family (str): font family for sans-serif font (default is "Arial")
+    :param tick_label_size (float): tick label sizes (default is 24)
+    :param axes_linewidth (float): axes linewidth (default is 2)
 
     """
 
@@ -117,13 +112,11 @@ def prepare_data_for_boxplot(x_data, x_labels, trial_counts):
 
     Stratify data by #extrema in wheel data for boxplot.
 
-    Args:
-        x_data (list of array-like): data arrays for each group
-        x_labels (list of str): labels for each group
-        trial_counts (list): #trials for each group
+    :param x_data (list of array-like): data arrays for each group
+    :param x_labels (list of str): labels for each group
+    :param trial_counts (list): #trials for each group
 
-    Returns:
-        data (list): data values with corresponding group labels
+    :return data (list): data values with corresponding group labels
 
     """
 
@@ -140,11 +133,10 @@ def add_statistical_annotations(ax, pairs, overall_df, order, statistical_test):
 
     Add statistical annotations to plot
 
-    Args:
-        ax (Axes): Axes object
-        pairs (list of tuple): group label pairs for statistical testing
-        overall_df (DataFrame): data as DataFrame
-        order (list): group label order on x-axis
+    :param ax (Axes): Axes object
+    :param pairs (list of tuple): group label pairs for statistical testing
+    :param overall_df (DataFrame): data as DataFrame
+    :param order (list): group label order on x-axis
 
     Raises:
         Exception: if any error occurs during annotation 
@@ -162,9 +154,8 @@ def save_plot(directory, filename):
     """
     Save plot
 
-    Args:
-        directory (str): directory path where plot should be saved
-        filename (str): file name to save plot as
+    :param directory (str): directory path where plot should be saved
+    :param filename (str): file name to save plot as
 
     """
     Path(directory).mkdir(parents=True, exist_ok=True)
@@ -180,12 +171,11 @@ def plot_boxplot(data, tstring, xstring, ystring, order, statistical_test, figur
 
     Plot data by #extrema in wheel data as boxplot
 
-    Args:
-        data (list): data values
-        tstring (str): title
-        xstring (str): x-axis label
-        ystring (str): y-axis label
-        figure_size (tuple, optional): figure size (width, height)
+    :param data (list): data values
+    :param tstring (str): title
+    :param xstring (str): x-axis label
+    :param ystring (str): y-axis label
+    :param figure_size (tuple, optional): figure size (width, height)
 
     """
     
@@ -219,16 +209,15 @@ def plot_four_boxplot_grps(n_trials, x_data, x_labels, tstr, xstr, ystr, yname, 
 
     Generate a boxplot comparing data groups by #extrema
 
-    Args:
-        x_data (list of array-like): data arrays per group
-        x_labels (list of str): labels per group
-        tstr (str): title
-        xstr (str): x-axis label
-        ystr (str): y-axis label
-        yname (str): variable of interest
-        directory (str): directory to store plot
-        statistical_test (str): statistical test name (i.e. "Wilcoxon")
-        figure_size (tuple, optional): figure size (width, height)
+    :param x_data (list of array-like): data arrays per group
+    :param x_labels (list of str): labels per group
+    :param tstr (str): title
+    :param xstr (str): x-axis label
+    :param ystr (str): y-axis label
+    :param yname (str): variable of interest
+    :param directory (str): directory to store plot
+    :param statistical_test (str): statistical test name (i.e. "Wilcoxon")
+    :param figure_size (tuple, optional): figure size (width, height)
 
     """
     
@@ -240,10 +229,9 @@ def plot_four_boxplot_grps(n_trials, x_data, x_labels, tstr, xstr, ystr, yname, 
 def plot_glm_hmm_engagement(group, data_path, cstring):
     """Plot proportion engaged per mouse 
 
-    Args:
-        group (str): wiggler group ["good", "neutral", "bad"]
-        data_path (str): data path to store files
-        cstring (str): color hex code
+    :param group (str): wiggler group ["good", "neutral", "bad"]
+    :param data_path (str): data path to store files
+    :param cstring (str): color hex code
 
     """
 
