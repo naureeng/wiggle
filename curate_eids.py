@@ -23,7 +23,7 @@ def curate_eids_mouse(subject_name, data_path):
     eids_final = [] ## initialize 
 
     #for eid in eids:
-    for i in range(10):
+    for i in range(len(eids)):
         eid = eids[i]
         try:
             processed_eid = prepare_wheel_data_single_csv(subject_name, eid, data_path)
