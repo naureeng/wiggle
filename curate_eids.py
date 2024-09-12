@@ -54,7 +54,7 @@ def curate_eids_neural(reg, data_path):
 
     eids_final = [] ## initialize
 
-    for i in range(2):
+    for i in range(len(eids)):
         ## obtain session and probe
         eid = eids[i]
         probe = probes[i]
