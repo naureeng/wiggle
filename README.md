@@ -43,5 +43,5 @@ Run analysis per group with `python3 master_script_pool_mice.py`. <br>
 Run speed vs accuracy analysis with `python3 speed_vs_accu_analysis.py`.
 
 ## contact
-E-mail <naureen.ghani.18@ucl.ac.uk> with any questions.
+E-mail <naureen.ghani.18@alumni.ucl.ac.uk> with any questions.
 
