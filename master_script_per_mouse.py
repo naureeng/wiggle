@@ -5,10 +5,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
 import sys
+import argparse
 import pickle
 from analysis_utils import load_data, save_average_data, compute_glm_hmm_engagement, convert_wheel_deg_to_visual_deg, classify_mouse_wiggler 
 from curate_eids import curate_eids_mouse
 from wheel_utils import plot_ballistic_movement
+from prepare_wheelData_csv import *
+from main import build_k_groups_per_mouse
 
 ## import subdirectories
 pth_dir = "/nfs/gatsbystor/naureeng/"
@@ -76,10 +79,20 @@ def per_mouse_analysis(subject_name):
         print(f"no GLM-HMM data for {subject_name}")
 
 if __name__=="__main__":
-    subject_name = "CSHL_003"
-    curate_eids_mouse(subject_name, pth_dir)
-    plot_ballistic_movement(subject_name, pth_dir)
+    ## analysis per mouse
+    pth_dir = '/nfs/gatsbystor/naureeng/' ## state path
 
-    #classify_mouse_wiggler(subject_name, pth_dir)
-    #per_mouse_analysis(subject_name)
+    ## argument parser
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--subject", type=str, required=True)
+    args = parser.parse_args()
+
+    # Get subject name
+    subject_name = args.subject
+    
+    # Run analysis
+    curate_eids_mouse(subject_name, pth_dir)
+    time_window = "total"
+    # build_k_groups_per_mouse(mouse, "feedbackType", "proportion correct", pth_dir, time_window)
+
 

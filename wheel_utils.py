@@ -15,6 +15,7 @@ from itertools import chain
 from plot_utils import set_figure_style
 import seaborn as sns
 from matplotlib.ticker import MaxNLocator
+from scipy.fft import fft, fftfreq
 
 def find_nearest(array, value):
     """Obtains nearest value in array
@@ -36,7 +37,7 @@ def find_nearest(array, value):
         return idx
 
 
-def compute_n_extrema(t_eid, p_eid, n_trials):
+def compute_n_extrema(t_eid, p_eid, n_trials, stim_eid, time_window):
     """Obtains #extrema
     
     Computes #extrema for N = 1 session, 1 mouse
@@ -44,18 +45,123 @@ def compute_n_extrema(t_eid, p_eid, n_trials):
     :param t_eid (list): wheel time data [sec]
     :param p_eid (list): wheel position data [deg]
     :param n_trials (arr): #trials
+    :param stim_eid (list): stimulus onset times [sec]
+    :param time_window (str): "pre_stim", "post_stim", "total"
 
     :return n_extrema (list): #extrema
+    :return ext_idx (list): indices of extrema positions in wheel position data
+    :return high_freq_powers (list): list of high-frequency power values for each trial [deg**2]
 
     """
 
-    ## compute extrema 
-    min_idx = [argrelmin(p_eid[i], order=1)[0] for i in range(n_trials)]
-    max_idx = [argrelmax(p_eid[i], order=1)[0] for i in range(n_trials)]
-    ext_idx = [np.concatenate((min_idx[i],max_idx[i]), axis=0) for i in range(n_trials)]
-    n_extrema = [len(ext_idx[i]) for i in range(n_trials)]
+    n_extrema = []
+    ext_idx = []
+    high_freq_powers = []
 
-    return n_extrema
+    for i in range(n_trials):
+        t = t_eid[i]
+        p = p_eid[i]
+        stim = stim_eid[i]
+
+        ## subset wheel position by time window
+        if time_window == "pre_stim":
+            p_analysis = p[:stim]
+        elif time_window == "post_stim":
+            p_analysis = p[stim:]
+        else: # "total"
+            p_analysis = p
+
+        ## handle edge case: empty array
+        if p_analysis.size < 3:
+            ext_idx.append(np.array([], dtype=int))
+            n_extrema.append(0)
+            high_freq_powers.append(0)
+        else:
+
+            ## compute extrema 
+            min_idx = argrelmin(p_analysis, order=1)[0] 
+            max_idx = argrelmax(p_analysis, order=1)[0] 
+            extrema = np.sort(np.concatenate([min_idx,max_idx]))
+            ext_idx.append(extrema)
+            n_extrema.append(len(extrema))
+
+            ## compute psd
+            n = len(p_analysis)
+            fft_result = fft(p_analysis)
+            fs = 1000 # sampling frequency
+            freqs = fftfreq(n, d=1/fs) # frequency axis
+            psd = np.abs(fft_result)**2 # psd (magnitude squared of fft)
+
+            ## find high-frequency power (above threshold frequency)
+            freq_threshold = 5 # threshold for high frequency
+            high_freq_mask = np.abs(freqs) > freq_threshold  # Frequencies higher than freq_threshold
+            high_freq_power = np.sum(psd[high_freq_mask])
+            high_freq_powers.append(high_freq_power)
+
+    return n_extrema, ext_idx, high_freq_powers
+
+
+def compute_n_changes(t_eid, p_eid, n_trials, stim_eid, time_window, velocity_thresh=1e-4):
+    """
+
+    Compute both number and indices of sign changes in wheel velocity per trial
+
+    :param t_eid (list): wheel time data [sec]
+    :param p_eid (list): wheel position data [deg]
+    :param n_trials (arr): #trials
+    :param stim_eid (list): stimulus onset times [sec]
+    :param time_window (str): "pre_stim", "post_stim", "total"
+    :param velocity_threshold (float): threshold for ignoring tiny velocity fluctuations
+
+    :return n_changes (list): #changes
+    :return sign_change_idx (list): indices of sign changes in wheel velocity data
+
+    """
+
+    n_changes = []
+    sign_change_idx = []
+
+    for i in range(n_trials):
+        t = t_eid[i]
+        p = p_eid[i]
+        stim = stim_eid[i]
+
+        if len(t) < 2 or len(p) < 2:
+            n_changes.append(0)
+            sign_change_indices.append(np.array([], dtype=int))
+            continue
+
+        v = np.diff(p) / np.diff(t)
+
+        ## subset wheel position by time window
+        if time_window == "pre_stim":
+            v_analysis = v[:stim]
+        elif time_window == "post_stim":
+            v_analysis = v[stim:]
+        else: # "total"
+            v_analysis = v
+
+        ## apply small threshold to ignore tiny jitter
+        v_analysis[np.abs(v_analysis) < velocity_thresh] = 0
+
+        ## get sign of velocity
+        signs = np.sign(v_analysis)
+
+        ## remove zero sign (false sign changes)
+        nonzero_mask = signs != 0
+        nonzero_signs = signs[nonzero_mask]
+
+        ## compute indices of sign changes
+        idx_all = np.arange(len(signs))
+        idx_nonzero = idx_all[nonzero_mask]
+        change_mask = np.diff(nonzero_signs) != 0
+        change_idx = idx_nonzero[:-1][change_mask]
+
+        ## store results
+        n_changes.append(len(change_idx))
+        sign_change_idx.append(change_idx)
+
+    return n_changes, sign_change_idx
 
 
 def compute_rms(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trials):
@@ -70,11 +176,14 @@ def compute_rms(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trial
     :param n_trials (np.array): #trials
 
     :return rms_eid (list): root mean square speed [deg/sec]
+    :return motion_energy_eid (list): motion energy [deg**2/sec]
 
     """
 
     ## analysis window = [motionOnset, responseTime]
     rms_eid = []
+    motion_energy_eid = []
+
     for i in range(n_trials):
 
         ## obtain input data per trial
@@ -96,19 +205,30 @@ def compute_rms(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trial
 
         n_bins = len(bins) ## normalize rms by #bins
 
-        slope_trial_bin = []
+        slope_trial_bin = [] ## for RMS
+        motion_energy_bin = [] ## for motion energy
+
         for j in range(len(bins)-1):
             start_time = bins[j]
             stop_time = bins[j+1]
+
             start_theta = pos_trial[idx_bins[j]]
             stop_theta = pos_trial[idx_bins[j+1]]
-            slope = np.abs(stop_theta - start_theta)/(stop_time - start_time) ## compute slope magnitude in 0.05 sec bin
+
+            delta_theta = stop_theta - start_theta
+            delta_time = stop_time - start_time
+            velocity = delta_theta / delta_time
+
+            slope = np.abs(delta_theta)/(delta_time) ## compute slope magnitude in 0.05 sec bin
             slope_trial_bin.append(slope**2) ## compute squared slope magnitude
+            motion_energy_bin.append((velocity ** 2) * delta_time)  # ⬅️ squared velocity × Δt
 
         rms = np.sqrt(sum(slope_trial_bin) / n_bins) if n_bins !=0 else 0 ## normalize by #bins and take square root (units: [deg/sec]) 
         rms_eid.append(rms)
+        motion_energy = sum(motion_energy_bin) 
+        motion_energy_eid.append(motion_energy)
 
-    return rms_eid
+    return rms_eid, motion_energy_eid
 
 
 def compute_speed(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_trials, n_extrema, data_path, subject_name, eid):
@@ -126,12 +246,21 @@ def compute_speed(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_tri
 
     :return speed_eid (list): wheel speed [deg/sec]
     :return ballistic_eid (Boolean list): 0==False [non-ballistic] and 1==True [ballistic]
+    :return motion_energy_eid (list): wheel motion energy [deg**2/sec]
+    :return motion_energy_norm_eid (list): wheel motion energy normalised by wiggle duration [deg**2/sec]
+    :return extrema_height_eid (list): wheel amplitude [wheel deg]
+    :return jitter_duration_eid (list): wheel jitter duration [sec]
 
     """
 
     ## analysis window = [motionOnset, responseTime]
     speed_eid = []
     ballistic_eid = []
+    motion_energy_eid = []
+    motion_energy_norm_eid = []
+    extrema_height_eid = []
+    jitter_duration_eid = []
+
     wiggle_amplitude = {"K = 2": [], "K = 3": [], "K = 4": []} ## initialize empty dict for wiggle amplitudes (wheel degrees)
     wiggle_speed     = {"K = 2": [], "K = 3": [], "K = 4": []} ## initialize empty dict for wiggle speed (wheel degrees/sec)
 
@@ -158,9 +287,18 @@ def compute_speed(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_tri
         t_extrema = np.sort(t_idx)
         idx = np.argsort(t_idx)
         p_extrema = [p_idx[i] for i in idx]
+        session_extrema_heights = p_extrema
 
-        ## compute duration
+        ## compute trial duration
         duration = t_eid[i][-1] - t_eid[i][0]
+
+        ## compute jitter duration
+        if len(idx) >=2:
+            jitter_duration = t_idx[idx[-1]] - t_idx[idx[0]]
+        else:
+            jitter_duration = np.nan
+
+        session_jitter_durations = jitter_duration
 
         ## compute velocity
         v_final = np.diff(p_eid[i]) / np.diff(t_eid[i])
@@ -184,11 +322,23 @@ def compute_speed(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_tri
             print("zero extrema")
             speed = np.abs(p_motionOnset[-1] / t_motionOnset[-1]) ## wheel speed magnitude
 
+            dp = p_motionOnset[-1] # total displacement
+            dt = t_motionOnset[-1] # total duration
+
+            ## motion energy
+            motion_energy = (dp/dt)**2 if dt > 0 else np.nan
+
         elif k_trial==1 and t_idx[0]<=0:
             ## trials with 1 extremum before motionOnset considered as zero k trial
             print("pre-motionOnset extremum")
             speed = np.abs(p_motionOnset[-1] / t_motionOnset[-1]) ## wheel speed magnitude
 
+            ## motion energy
+            dp = p_motionOnset[-1] # total displacement
+            dt = t_motionOnset[-1] # total duration
+
+            motion_energy = (dp/dt)**2 if dt > 0 else np.nan
+            
         else:
             ## trials with non-zero k are not ballistic
             ballistic = 0
@@ -211,9 +361,23 @@ def compute_speed(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_tri
             wiggle_amplitude[k_key].extend([p_idx[i] for i in idx])
             wiggle_speed[k_key].append(speed)
 
+            ## compute motion energy excluding last extremum
+            me_extrema = []
+            for j in range(len(p_extrema)-1):  # exclude last extremum
+                dp = p_extrema[j+1] - p_extrema[j]
+                dt_seg = t_extrema[j+1] - t_extrema[j]
+                if dt_seg > 0:
+                    me_extrema.append((dp**2) / dt_seg) ## units: deg**2 / sec
+
+            ## motion energy units: (deg**2 / sec ) / (sec) = deg**2 / sec**2
+            motion_energy = sum(me_extrema) / T_wiggle if T_wiggle > 0 else np.nan
+
         ## save data
         speed_eid.append(speed)
         ballistic_eid.append(ballistic)
+        motion_energy_eid.append(motion_energy)
+        extrema_height_eid.append(session_extrema_heights)
+        jitter_duration_eid.append(session_jitter_durations)
 
     ## plot wiggle amplitudes
     fig, axs = plt.subplots(1, 3, figsize=(24,8))
@@ -261,7 +425,7 @@ def compute_speed(t_eid, p_eid, motionOnset_eid_idx, responseTime_eid_idx, n_tri
     f.close()
     print("wheel data pickled")
 
-    return speed_eid, ballistic_eid
+    return speed_eid, ballistic_eid, motion_energy_eid, extrema_height_eid, jitter_duration_eid
 
 
 def get_extended_trial_windows(eid, time_lower, time_upper, movement_type):
